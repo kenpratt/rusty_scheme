@@ -24,6 +24,7 @@ enum Token {
     Identifier(String),
     Integer(int),
     Boolean(bool),
+    String(String),
 }
 
 struct ParseError {
@@ -127,6 +128,11 @@ impl<'a> Lexer<'a> {
                             self.tokens.push(Integer(val));
                             try!(self.parse_delimiter());
                         },
+                        '\"' => {
+                            let val = try!(self.parse_string());
+                            self.tokens.push(String(val));
+                            try!(self.parse_delimiter());
+                        },
                         ' ' | '\x09' | '\x0a' | '\x0d' => self.advance(),
                         _  => parse_error!("Unexpected character: {}", c),
                     }
@@ -193,6 +199,32 @@ impl<'a> Lexer<'a> {
         }
         Ok(s)
     }
+
+    fn parse_string(&mut self) -> Result<String, ParseError> {
+        if self.current() != Some('\"') { parse_error!("Unexpected character: {}", self.current()) };
+        self.advance();
+
+        let mut s = String::new();
+        loop {
+            match self.current() {
+                Some(c) => {
+                    match c {
+                        '\"' => {
+                            self.advance();
+                            break;
+                        },
+                        _ => {
+                            s.push_char(c);
+                            self.advance();
+                        }
+                    }
+                },
+                None => parse_error!("Expected end quote, but found EOF instead")
+            }
+        }
+        Ok(s)
+    }
+
     fn parse_delimiter(&mut self) -> Result<(), ParseError> {
         match self.current() {
             Some(c) => {
@@ -249,6 +281,16 @@ fn test_identifiers() {
         assert_eq!(Lexer::tokenize(*identifier).unwrap(),
                    vec![Identifier(identifier.to_str())])
     }
+}
+
+#[test]
+fn test_strings() {
+    assert_eq!(Lexer::tokenize("\"hello\"").unwrap(),
+               vec![String("hello".to_str())]);
+    assert_eq!(Lexer::tokenize("\"a _ $ snthoeau(*&G#$()*^!\"").unwrap(),
+               vec![String("a _ $ snthoeau(*&G#$()*^!".to_str())]);
+    assert_eq!(Lexer::tokenize("\"truncated").err().unwrap().to_str().as_slice(),
+               "ParseError: Expected end quote, but found EOF instead (line: 1, column: 11)")
 }
 
 #[test]
