@@ -44,10 +44,10 @@ struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    fn tokenize(s: &str) -> Vec<Token> {
+    fn tokenize(s: &str) -> Result<Vec<Token>, &'static str> {
         let mut lexer = Lexer { chars: s.chars().peekable(), current: None, tokens: Vec::new() };
-        lexer.run();
-        lexer.tokens
+        try!(lexer.run());
+        Ok(lexer.tokens)
     }
 
     fn current(&self) -> Option<char> {
@@ -65,7 +65,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn run(&mut self) {
+    fn run(&mut self) -> Result<(), &'static str> {
         self.advance();
         loop {
             match self.current() {
@@ -100,12 +100,13 @@ impl<'a> Lexer<'a> {
                             self.tokens.push(Integer(val));
                         },
                         ' ' => self.advance(),
-                        _   => fail!("unexpected character: {}", c),
+                        _   => return Err("unexpected character"),
                     }
                 },
                 None => break
             }
         };
+        Ok(())
     }
 
     fn parse_number(&mut self) -> int {
@@ -130,24 +131,29 @@ impl<'a> Lexer<'a> {
 
 #[test]
 fn test_simple_lexing() {
-    assert_eq!(Lexer::tokenize("(+ 2 3)"),
+    assert_eq!(Lexer::tokenize("(+ 2 3)").unwrap(),
                vec![OpenParen, Identifier("+".to_str()), Integer(2), Integer(3), CloseParen]);
 }
 
 #[test]
 fn test_multi_digit_integers() {
-    assert_eq!(Lexer::tokenize("(+ 21 325)"),
+    assert_eq!(Lexer::tokenize("(+ 21 325)").unwrap(),
                vec![OpenParen, Identifier("+".to_str()), Integer(21), Integer(325), CloseParen]);
 }
 
 #[test]
 fn test_subtraction() {
-    assert_eq!(Lexer::tokenize("(- 7 42)"),
+    assert_eq!(Lexer::tokenize("(- 7 42)").unwrap(),
                vec![OpenParen, Identifier("-".to_str()), Integer(7), Integer(42), CloseParen]);
 }
 
 #[test]
 fn test_negative_integers() {
-    assert_eq!(Lexer::tokenize("(+ -8 +2 -33)"),
+    assert_eq!(Lexer::tokenize("(+ -8 +2 -33)").unwrap(),
                vec![OpenParen, Identifier("+".to_str()), Integer(-8), Integer(2), Integer(-33), CloseParen]);
+}
+
+#[test]
+fn test_bad_syntax() {
+    assert!(Lexer::tokenize("(&&)").is_err())
 }
