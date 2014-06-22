@@ -105,8 +105,8 @@ impl<'a> Lexer<'a> {
                             self.tokens.push(Integer(val));
                             try!(self.parse_delimiter());
                         },
-                        ' ' => self.advance(),
-                        _   => parse_error!("Unexpected character: {}", c),
+                        ' ' | '\x09' | '\x0a' | '\x0d' => self.advance(),
+                        _  => parse_error!("Unexpected character: {}", c),
                     }
                 },
                 None => break
@@ -142,7 +142,7 @@ impl<'a> Lexer<'a> {
                         self.tokens.push(CloseParen);
                         self.advance();
                     },
-                    ' ' => (),
+                    ' ' | '\x09'| '\x0a' | '\x0d' => (),
                     _ => parse_error!("Unexpected character when looking for a delimiter: {}", c),
                 }
             },
@@ -174,6 +174,12 @@ fn test_subtraction() {
 fn test_negative_integers() {
     assert_eq!(Lexer::tokenize("(+ -8 +2 -33)").unwrap(),
                vec![OpenParen, Identifier("+".to_str()), Integer(-8), Integer(2), Integer(-33), CloseParen]);
+}
+
+#[test]
+fn test_whitespace() {
+    assert_eq!(Lexer::tokenize("(+ 1 1)\n(+\n    2\t2 \n )\r\n  \n").unwrap(),
+               vec![OpenParen, Identifier("+".to_str()), Integer(1), Integer(1), CloseParen, OpenParen, Identifier("+".to_str()), Integer(2), Integer(2), CloseParen]);
 }
 
 #[test]
