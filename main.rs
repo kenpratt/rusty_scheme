@@ -1,9 +1,12 @@
+#![feature(macro_rules)]
+
 use std::str;
 use std::iter;
 use std::from_str;
 
 fn main() {
     run("(+ 2 3)");
+    run("(22+)");
 }
 
 fn run(s: &str) {
@@ -24,6 +27,12 @@ enum Token {
 struct ParseError {
     message: String,
 }
+
+macro_rules! parse_error(
+    ($($arg:tt)*) => (
+        return Err(ParseError { message: format!($($arg)*) })
+    )
+)
 
 struct Lexer<'a> {
     chars: iter::Peekable<char, str::Chars<'a>>,
@@ -91,7 +100,7 @@ impl<'a> Lexer<'a> {
                             try!(self.parse_terminator());
                         },
                         ' ' => self.advance(),
-                        _   => return Err(ParseError { message: format!("Unexpected character: {}", c) }),
+                        _   => parse_error!("Unexpected character: {}", c),
                     }
                 },
                 None => break
@@ -128,7 +137,7 @@ impl<'a> Lexer<'a> {
                         self.advance();
                     },
                     ' ' => (),
-                    _ => return Err(ParseError { message: format!("Unexpected character when looking for a terminator: {}", c) }),
+                    _ => parse_error!("Unexpected character when looking for a terminator: {}", c),
                 }
             },
             None => ()
