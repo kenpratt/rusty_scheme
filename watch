@@ -1,0 +1,2 @@
+#!/bin/bash
+kicker -e "rustc $@ main.rs && ./main" -c -l 0.1 main.rs
