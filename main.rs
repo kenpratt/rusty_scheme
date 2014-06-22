@@ -1,3 +1,7 @@
+use std::fmt;
+use std::str;
+use std::from_str;
+
 fn main() {
     run("(+ 2 3)");
     run("(+ 21 325)");
@@ -16,8 +20,8 @@ enum Token {
     Integer(int),
 }
 
-impl std::fmt::Show for Token {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Show for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             OpenParen => write!(f, "OpenParen"),
             CloseParen => write!(f, "CloseParen"),
@@ -36,11 +40,11 @@ fn tokenize(s: &str) -> Vec<Token> {
                 match c {
                     '(' => tokens.push(OpenParen),
                     ')' => tokens.push(CloseParen),
-                    '+' => tokens.push(Identifier(std::str::from_char(c))),
+                    '+' => tokens.push(Identifier(str::from_char(c))),
                     '0'..'9' => {
-                        let mut s = std::str::from_char(c);
-                        for c in iter.by_ref().take_while(|c| c.is_digit()) { s.push_char(c); }
-                        let val = std::from_str::from_str(s.as_slice()).unwrap();
+                        let mut s = str::from_char(c);
+                        for c in iter.by_ref().take_while(|c| *c >= '0' && *c <= '9') { s.push_char(c); }
+                        let val = from_str::from_str(s.as_slice()).unwrap();
                         tokens.push(Integer(val))
                     },
                     ' ' => (),
