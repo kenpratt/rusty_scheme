@@ -279,7 +279,7 @@ fn test_booleans() {
 fn test_identifiers() {
     for identifier in ["*", "<", "<=", "if", "while", "$t$%*=:t059s"].iter() {
         assert_eq!(Lexer::tokenize(*identifier).unwrap(),
-                   vec![Identifier(identifier.to_str())])
+                   vec![Identifier(identifier.to_str())]);
     }
 }
 
@@ -290,7 +290,7 @@ fn test_strings() {
     assert_eq!(Lexer::tokenize("\"a _ $ snthoeau(*&G#$()*^!\"").unwrap(),
                vec![String("a _ $ snthoeau(*&G#$()*^!".to_str())]);
     assert_eq!(Lexer::tokenize("\"truncated").err().unwrap().to_str().as_slice(),
-               "ParseError: Expected end quote, but found EOF instead (line: 1, column: 11)")
+               "ParseError: Expected end quote, but found EOF instead (line: 1, column: 11)");
 }
 
 #[test]
@@ -303,20 +303,26 @@ fn test_whitespace() {
 #[test]
 fn test_bad_syntax() {
     assert_eq!(Lexer::tokenize("(\\)").err().unwrap().to_str().as_slice(),
-               "ParseError: Unexpected character: \\ (line: 1, column: 2)")
+               "ParseError: Unexpected character: \\ (line: 1, column: 2)");
 }
 
 #[test]
 fn test_delimiter_checking() {
     assert_eq!(Lexer::tokenize("(+-)").err().unwrap().to_str().as_slice(),
-               "ParseError: Unexpected character when looking for a delimiter: - (line: 1, column: 3)")
+               "ParseError: Unexpected character when looking for a delimiter: - (line: 1, column: 3)");
 
     assert_eq!(Lexer::tokenize("(-22+)").err().unwrap().to_str().as_slice(),
-               "ParseError: Unexpected character when looking for a delimiter: + (line: 1, column: 5)")
+               "ParseError: Unexpected character when looking for a delimiter: + (line: 1, column: 5)");
 
     assert_eq!(Lexer::tokenize("(22+)").err().unwrap().to_str().as_slice(),
-               "ParseError: Unexpected character when looking for a delimiter: + (line: 1, column: 4)")
+               "ParseError: Unexpected character when looking for a delimiter: + (line: 1, column: 4)");
 
     assert_eq!(Lexer::tokenize("(+ 2 3)\n(+ 1 2-)").err().unwrap().to_str().as_slice(),
-               "ParseError: Unexpected character when looking for a delimiter: - (line: 2, column: 7)")
+               "ParseError: Unexpected character when looking for a delimiter: - (line: 2, column: 7)");
+}
+
+#[test]
+fn test_complex_code_block() {
+    assert_eq!(Lexer::tokenize("(define (list-of-squares n)\n  (let loop ((i n) (res (list)))\n    (if (< i 0)\n        res\n        (loop (- i 1) (cons (* i i) res)))))").unwrap(),
+               vec![OpenParen, Identifier("define".to_str()), OpenParen, Identifier("list-of-squares".to_str()), Identifier("n".to_str()), CloseParen, OpenParen, Identifier("let".to_str()), Identifier("loop".to_str()), OpenParen, OpenParen, Identifier("i".to_str()), Identifier("n".to_str()), CloseParen, OpenParen, Identifier("res".to_str()), OpenParen, Identifier("list".to_str()), CloseParen, CloseParen, CloseParen, OpenParen, Identifier("if".to_str()), OpenParen, Identifier("<".to_str()), Identifier("i".to_str()), Integer(0), CloseParen, Identifier("res".to_str()), OpenParen, Identifier("loop".to_str()), OpenParen, Identifier("-".to_str()), Identifier("i".to_str()), Integer(1), CloseParen, OpenParen, Identifier("cons".to_str()), OpenParen, Identifier("*".to_str()), Identifier("i".to_str()), Identifier("i".to_str()), CloseParen, Identifier("res".to_str()), CloseParen, CloseParen, CloseParen, CloseParen, CloseParen]);
 }
