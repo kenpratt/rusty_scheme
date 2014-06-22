@@ -23,6 +23,7 @@ enum Token {
     CloseParen,
     Identifier(String),
     Integer(int),
+    Boolean(bool),
 }
 
 struct ParseError {
@@ -110,6 +111,11 @@ impl<'a> Lexer<'a> {
                                 }
                             }
                         },
+                        '#' => {
+                            let val = try!(self.parse_boolean());
+                            self.tokens.push(Boolean(val));
+                            try!(self.parse_delimiter());
+                        },
                         'A'..'Z' | 'a'..'z' | '!' | '$' | '%' | '&' | '*' | '/' | ':' | '<' | '=' | '>' | '?' | '_' | '^' => {
                             let val = try!(self.parse_identifier());
                             self.tokens.push(Identifier(val));
@@ -148,6 +154,25 @@ impl<'a> Lexer<'a> {
             }
         }
         Ok(from_str::from_str(s.as_slice()).unwrap())
+    }
+
+    fn parse_boolean(&mut self) -> Result<bool, ParseError> {
+        if self.current() != Some('#') { parse_error!("Unexpected character: {}", self.current()) };
+        self.advance();
+
+        match self.current() {
+            Some('t') => {
+                self.advance();
+                Ok(true)
+            },
+            Some('f') => {
+                self.advance();
+                Ok(false)
+            },
+            _ => {
+                parse_error!("Unexpected character when looking for t/f: {}", self.current())
+            }
+        }
     }
 
     fn parse_identifier(&mut self) -> Result<String, ParseError> {
@@ -208,6 +233,14 @@ fn test_subtraction() {
 fn test_negative_integers() {
     assert_eq!(Lexer::tokenize("(+ -8 +2 -33)").unwrap(),
                vec![OpenParen, Identifier("+".to_str()), Integer(-8), Integer(2), Integer(-33), CloseParen]);
+}
+
+#[test]
+fn test_booleans() {
+    assert_eq!(Lexer::tokenize("#t").unwrap(),
+               vec![Boolean(true)]);
+    assert_eq!(Lexer::tokenize("#f").unwrap(),
+               vec![Boolean(false)]);
 }
 
 #[test]
