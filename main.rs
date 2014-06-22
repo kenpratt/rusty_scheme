@@ -84,20 +84,23 @@ impl<'a> Lexer<'a> {
                                 Some('0'..'9') => {
                                     // skip past the +/- symbol and parse the number
                                     self.advance();
-                                    let val = self.parse_number();
+                                    let val = try!(self.parse_number());
                                     self.tokens.push(Integer(if c == '-' { -1 * val } else { val }));
+                                    try!(self.parse_terminator());
                                 },
                                 _ => {
                                     // not followed by a digit, must be an identifier
                                     self.tokens.push(Identifier(str::from_char(c)));
                                     self.advance();
+                                    try!(self.parse_terminator());
                                 }
                             }
                         },
                         '0'..'9' => {
                             // don't advance -- let parse_number advance as needed
-                            let val = self.parse_number();
+                            let val = try!(self.parse_number());
                             self.tokens.push(Integer(val));
+                            try!(self.parse_terminator());
                         },
                         ' ' => self.advance(),
                         _   => return Err("unexpected character"),
@@ -109,7 +112,7 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    fn parse_number(&mut self) -> int {
+    fn parse_number(&mut self) -> Result<int, &'static str> {
         let mut s = String::new();
         loop {
             match self.current() {
@@ -125,7 +128,24 @@ impl<'a> Lexer<'a> {
                 None => break
             }
         }
-        from_str::from_str(s.as_slice()).unwrap()
+        Ok(from_str::from_str(s.as_slice()).unwrap())
+    }
+
+    fn parse_terminator(&mut self) -> Result<(), &'static str> {
+        match self.current() {
+            Some(c) => {
+                match c {
+                    ')' => {
+                        self.tokens.push(CloseParen);
+                        self.advance();
+                    },
+                    ' ' => (),
+                    _ => return Err("unexpected character"),
+                }
+            },
+            None => ()
+        };
+        Ok(())
     }
 }
 
@@ -156,4 +176,11 @@ fn test_negative_integers() {
 #[test]
 fn test_bad_syntax() {
     assert!(Lexer::tokenize("(&&)").is_err())
+}
+
+#[test]
+fn test_terminator_checking() {
+    assert!(Lexer::tokenize("(+-)").is_err())
+    assert!(Lexer::tokenize("(-22+)").is_err())
+    assert!(Lexer::tokenize("(22+)").is_err())
 }
