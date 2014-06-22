@@ -1,4 +1,3 @@
-use std::fmt;
 use std::str;
 use std::iter;
 use std::from_str;
@@ -13,28 +12,12 @@ fn run(s: &str) {
     println!("tokens: {}", tokens);
 }
 
+#[deriving(Show, PartialEq)]
 enum Token {
     OpenParen,
     CloseParen,
     Identifier(String),
     Integer(int),
-}
-
-impl fmt::Show for Token {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            OpenParen => write!(f, "OpenParen"),
-            CloseParen => write!(f, "CloseParen"),
-            Identifier(ref v) => write!(f, "Identifier({})", v),
-            Integer(ref v) => write!(f, "Integer({})", v),
-        }
-    }
-}
-
-impl PartialEq for Token {
-    fn eq(&self, other: &Token) -> bool {
-        self.to_str() == other.to_str()
-    }
 }
 
 struct Lexer<'a> {
