@@ -8,6 +8,7 @@ use std::from_str;
 fn main() {
     run("(+ 2 3)");
     run("(22+)");
+    run("(+ 2 3)\n(+ 1 2-)");
 }
 
 fn run(s: &str) {
@@ -26,17 +27,19 @@ enum Token {
 
 struct ParseError {
     message: String,
+    line: uint,
+    column: uint,
 }
 
 impl fmt::Show for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ParseError: {}", self.message)
+        write!(f, "ParseError: {} (line: {}, column: {})", self.message, self.line, self.column)
     }
 }
 
 macro_rules! parse_error(
     ($($arg:tt)*) => (
-        return Err(ParseError { message: format!($($arg)*) })
+        return Err(ParseError { message: format!($($arg)*), line: self.line, column: self.column })
     )
 )
 
@@ -44,11 +47,13 @@ struct Lexer<'a> {
     chars: iter::Peekable<char, str::Chars<'a>>,
     current: Option<char>,
     tokens: Vec<Token>,
+    line: uint,
+    column: uint,
 }
 
 impl<'a> Lexer<'a> {
     fn tokenize(s: &str) -> Result<Vec<Token>, ParseError> {
-        let mut lexer = Lexer { chars: s.chars().peekable(), current: None, tokens: Vec::new() };
+        let mut lexer = Lexer { chars: s.chars().peekable(), current: None, tokens: Vec::new(), line: 1, column: 0 };
         try!(lexer.run());
         Ok(lexer.tokens)
     }
@@ -58,7 +63,13 @@ impl<'a> Lexer<'a> {
     }
 
     fn advance(&mut self) {
-        self.current = self.chars.next()
+        if self.current() == Some('\x0a') {
+            self.line += 1;
+            self.column = 1;
+        } else {
+            self.column += 1;
+        }
+        self.current = self.chars.next();
     }
 
     fn peek(&mut self) -> Option<char> {
@@ -179,17 +190,27 @@ fn test_negative_integers() {
 #[test]
 fn test_whitespace() {
     assert_eq!(Lexer::tokenize("(+ 1 1)\n(+\n    2\t2 \n )\r\n  \n").unwrap(),
-               vec![OpenParen, Identifier("+".to_str()), Integer(1), Integer(1), CloseParen, OpenParen, Identifier("+".to_str()), Integer(2), Integer(2), CloseParen]);
+               vec![OpenParen, Identifier("+".to_str()), Integer(1), Integer(1), CloseParen,
+                    OpenParen, Identifier("+".to_str()), Integer(2), Integer(2), CloseParen]);
 }
 
 #[test]
 fn test_bad_syntax() {
-    assert!(Lexer::tokenize("(&&)").is_err())
+    assert_eq!(Lexer::tokenize("(&&)").err().unwrap().to_str().as_slice(),
+               "ParseError: Unexpected character: & (line: 1, column: 2)")
 }
 
 #[test]
 fn test_delimiter_checking() {
-    assert!(Lexer::tokenize("(+-)").is_err())
-    assert!(Lexer::tokenize("(-22+)").is_err())
-    assert!(Lexer::tokenize("(22+)").is_err())
+    assert_eq!(Lexer::tokenize("(+-)").err().unwrap().to_str().as_slice(),
+               "ParseError: Unexpected character when looking for a delimiter: - (line: 1, column: 3)")
+
+    assert_eq!(Lexer::tokenize("(-22+)").err().unwrap().to_str().as_slice(),
+               "ParseError: Unexpected character when looking for a delimiter: + (line: 1, column: 5)")
+
+    assert_eq!(Lexer::tokenize("(22+)").err().unwrap().to_str().as_slice(),
+               "ParseError: Unexpected character when looking for a delimiter: + (line: 1, column: 4)")
+
+    assert_eq!(Lexer::tokenize("(+ 2 3)\n(+ 1 2-)").err().unwrap().to_str().as_slice(),
+               "ParseError: Unexpected character when looking for a delimiter: - (line: 2, column: 7)")
 }
