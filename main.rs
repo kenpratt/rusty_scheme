@@ -5,9 +5,6 @@ use std::from_str;
 
 fn main() {
     run("(+ 2 3)");
-    run("(+ 21 325)");
-    run("(- 21 4)");
-    run("(+ 8 -3)");
 }
 
 fn run(s: &str) {
@@ -31,6 +28,12 @@ impl fmt::Show for Token {
             Identifier(ref v) => write!(f, "Identifier({})", v),
             Integer(ref v) => write!(f, "Integer({})", v),
         }
+    }
+}
+
+impl PartialEq for Token {
+    fn eq(&self, other: &Token) -> bool {
+        self.to_str() == other.to_str()
     }
 }
 
@@ -120,4 +123,28 @@ impl<'a> Lexer<'a> {
         }
         from_str::from_str(s.as_slice()).unwrap()
     }
+}
+
+#[test]
+fn test_simple_lexing() {
+    assert_eq!(Lexer::tokenize("(+ 2 3)"),
+               vec![OpenParen, Identifier("+".to_str()), Integer(2), Integer(3), CloseParen]);
+}
+
+#[test]
+fn test_multi_digit_integers() {
+    assert_eq!(Lexer::tokenize("(+ 21 325)"),
+               vec![OpenParen, Identifier("+".to_str()), Integer(21), Integer(325), CloseParen]);
+}
+
+#[test]
+fn test_subtraction() {
+    assert_eq!(Lexer::tokenize("(- 7 42)"),
+               vec![OpenParen, Identifier("-".to_str()), Integer(7), Integer(42), CloseParen]);
+}
+
+#[test]
+fn test_negative_integers() {
+    assert_eq!(Lexer::tokenize("(+ -8 +2 -33)"),
+               vec![OpenParen, Identifier("+".to_str()), Integer(-8), Integer(2), Integer(-33), CloseParen]);
 }
