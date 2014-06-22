@@ -1,6 +1,7 @@
 #![feature(macro_rules)]
 
 use std::str;
+use std::fmt;
 use std::iter;
 use std::from_str;
 
@@ -23,9 +24,14 @@ enum Token {
     Integer(int),
 }
 
-#[deriving(Show)]
 struct ParseError {
     message: String,
+}
+
+impl fmt::Show for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ParseError: {}", self.message)
+    }
 }
 
 macro_rules! parse_error(
