@@ -89,13 +89,13 @@ impl<'a> Lexer<'a> {
                                     self.advance();
                                     let val = try!(self.parse_number());
                                     self.tokens.push(Integer(if c == '-' { -1 * val } else { val }));
-                                    try!(self.parse_terminator());
+                                    try!(self.parse_delimiter());
                                 },
                                 _ => {
                                     // not followed by a digit, must be an identifier
                                     self.tokens.push(Identifier(str::from_char(c)));
                                     self.advance();
-                                    try!(self.parse_terminator());
+                                    try!(self.parse_delimiter());
                                 }
                             }
                         },
@@ -103,7 +103,7 @@ impl<'a> Lexer<'a> {
                             // don't advance -- let parse_number advance as needed
                             let val = try!(self.parse_number());
                             self.tokens.push(Integer(val));
-                            try!(self.parse_terminator());
+                            try!(self.parse_delimiter());
                         },
                         ' ' => self.advance(),
                         _   => parse_error!("Unexpected character: {}", c),
@@ -134,7 +134,7 @@ impl<'a> Lexer<'a> {
         Ok(from_str::from_str(s.as_slice()).unwrap())
     }
 
-    fn parse_terminator(&mut self) -> Result<(), ParseError> {
+    fn parse_delimiter(&mut self) -> Result<(), ParseError> {
         match self.current() {
             Some(c) => {
                 match c {
@@ -143,7 +143,7 @@ impl<'a> Lexer<'a> {
                         self.advance();
                     },
                     ' ' => (),
-                    _ => parse_error!("Unexpected character when looking for a terminator: {}", c),
+                    _ => parse_error!("Unexpected character when looking for a delimiter: {}", c),
                 }
             },
             None => ()
@@ -182,7 +182,7 @@ fn test_bad_syntax() {
 }
 
 #[test]
-fn test_terminator_checking() {
+fn test_delimiter_checking() {
     assert!(Lexer::tokenize("(+-)").is_err())
     assert!(Lexer::tokenize("(-22+)").is_err())
     assert!(Lexer::tokenize("(22+)").is_err())
