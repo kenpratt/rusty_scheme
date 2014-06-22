@@ -20,14 +20,19 @@ enum Token {
     Integer(int),
 }
 
+#[deriving(Show)]
+struct ParseError {
+    message: String,
+}
+
 struct Lexer<'a> {
-  chars: iter::Peekable<char, str::Chars<'a>>,
-  current: Option<char>,
-  tokens: Vec<Token>,
+    chars: iter::Peekable<char, str::Chars<'a>>,
+    current: Option<char>,
+    tokens: Vec<Token>,
 }
 
 impl<'a> Lexer<'a> {
-    fn tokenize(s: &str) -> Result<Vec<Token>, &'static str> {
+    fn tokenize(s: &str) -> Result<Vec<Token>, ParseError> {
         let mut lexer = Lexer { chars: s.chars().peekable(), current: None, tokens: Vec::new() };
         try!(lexer.run());
         Ok(lexer.tokens)
@@ -48,7 +53,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn run(&mut self) -> Result<(), &'static str> {
+    fn run(&mut self) -> Result<(), ParseError> {
         self.advance();
         loop {
             match self.current() {
@@ -86,7 +91,7 @@ impl<'a> Lexer<'a> {
                             try!(self.parse_terminator());
                         },
                         ' ' => self.advance(),
-                        _   => return Err("unexpected character"),
+                        _   => return Err(ParseError { message: format!("Unexpected character: {}", c) }),
                     }
                 },
                 None => break
@@ -95,7 +100,7 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    fn parse_number(&mut self) -> Result<int, &'static str> {
+    fn parse_number(&mut self) -> Result<int, ParseError> {
         let mut s = String::new();
         loop {
             match self.current() {
@@ -114,7 +119,7 @@ impl<'a> Lexer<'a> {
         Ok(from_str::from_str(s.as_slice()).unwrap())
     }
 
-    fn parse_terminator(&mut self) -> Result<(), &'static str> {
+    fn parse_terminator(&mut self) -> Result<(), ParseError> {
         match self.current() {
             Some(c) => {
                 match c {
@@ -123,7 +128,7 @@ impl<'a> Lexer<'a> {
                         self.advance();
                     },
                     ' ' => (),
-                    _ => return Err("unexpected character"),
+                    _ => return Err(ParseError { message: format!("Unexpected character when looking for a terminator: {}", c) }),
                 }
             },
             None => ()
