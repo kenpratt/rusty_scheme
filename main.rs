@@ -36,15 +36,15 @@ fn tokenize(s: &str) -> Vec<Token> {
                 match c {
                     '(' => tokens.push(OpenParen),
                     ')' => tokens.push(CloseParen),
-                    '+' => tokens.push(Identifier(String::from_char(1, c))),
+                    '+' => tokens.push(Identifier(std::str::from_char(c))),
                     '0'..'9' => {
-                        let extra_chars: Vec<char> = iter.by_ref().take_while(|cc| cc.is_digit()).collect();
-                        let chars = vec![c].append(extra_chars.as_slice());
-                        let val = std::from_str::from_str(std::str::from_chars(chars.as_slice()).as_slice()).unwrap();
+                        let mut s = std::str::from_char(c);
+                        for c in iter.by_ref().take_while(|c| c.is_digit()) { s.push_char(c); }
+                        let val = std::from_str::from_str(s.as_slice()).unwrap();
                         tokens.push(Integer(val))
                     },
                     ' ' => (),
-                    _   => println!("other"),
+                    _   => println!("unexpected character: {}", c),
                 },
             None =>
                 return tokens
