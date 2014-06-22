@@ -1,10 +1,13 @@
 use std::fmt;
 use std::str;
+use std::iter;
 use std::from_str;
 
 fn main() {
     run("(+ 2 3)");
     run("(+ 21 325)");
+    run("(- 21 4)");
+    run("(+ 8 -3)");
 }
 
 fn run(s: &str) {
@@ -32,14 +35,14 @@ impl fmt::Show for Token {
 }
 
 struct Lexer<'a> {
-  chars: str::Chars<'a>,
+  chars: iter::Peekable<char, str::Chars<'a>>,
   current: Option<char>,
   tokens: Vec<Token>,
 }
 
 impl<'a> Lexer<'a> {
     fn tokenize(s: &str) -> Vec<Token> {
-        let mut lexer = Lexer { chars: s.chars(), current: None, tokens: Vec::new() };
+        let mut lexer = Lexer { chars: s.chars().peekable(), current: None, tokens: Vec::new() };
         lexer.run();
         lexer.tokens
     }
@@ -50,6 +53,13 @@ impl<'a> Lexer<'a> {
 
     fn advance(&mut self) {
         self.current = self.chars.next()
+    }
+
+    fn peek(&mut self) -> Option<char> {
+        match self.chars.peek() {
+            Some(c) => Some(*c),
+            None => None,
+        }
     }
 
     fn run(&mut self) {
@@ -66,9 +76,18 @@ impl<'a> Lexer<'a> {
                             self.tokens.push(CloseParen);
                             self.advance();
                         },
-                        '+' => {
-                            self.tokens.push(Identifier(str::from_char(c)));
-                            self.advance();
+                        '+' | '-' => {
+                            match self.peek() {
+                                Some('0'..'9') => {
+                                    self.advance();
+                                    let val = self.parse_number();
+                                    self.tokens.push(Integer(if c == '-' { -1 * val } else { val }))
+                                },
+                                _ => {
+                                    self.tokens.push(Identifier(str::from_char(c)));
+                                    self.advance();
+                                }
+                            }
                         },
                         '0'..'9' => {
                             let val = self.parse_number();
