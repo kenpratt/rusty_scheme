@@ -9,7 +9,7 @@ fn main() {
 
 fn run(s: &str) {
     println!("str: \"{}\"", s);
-    let tokens = tokenize(s);
+    let tokens = Lexer::tokenize(s);
     println!("tokens: {}", tokens);
 }
 
@@ -31,27 +31,74 @@ impl fmt::Show for Token {
     }
 }
 
-fn tokenize(s: &str) -> Vec<Token> {
-    let mut tokens = Vec::new();
-    let mut iter = s.chars();
-    loop {
-        match iter.next() {
-            Some(c) =>
-                match c {
-                    '(' => tokens.push(OpenParen),
-                    ')' => tokens.push(CloseParen),
-                    '+' => tokens.push(Identifier(str::from_char(c))),
-                    '0'..'9' => {
-                        let mut s = str::from_char(c);
-                        for c in iter.by_ref().take_while(|c| *c >= '0' && *c <= '9') { s.push_char(c); }
-                        let val = from_str::from_str(s.as_slice()).unwrap();
-                        tokens.push(Integer(val))
-                    },
-                    ' ' => (),
-                    _   => println!("unexpected character: {}", c),
+struct Lexer<'a> {
+  chars: str::Chars<'a>,
+  current: Option<char>,
+  tokens: Vec<Token>,
+}
+
+impl<'a> Lexer<'a> {
+    fn tokenize(s: &str) -> Vec<Token> {
+        let mut lexer = Lexer { chars: s.chars(), current: None, tokens: Vec::new() };
+        lexer.run();
+        lexer.tokens
+    }
+
+    fn current(&self) -> Option<char> {
+        self.current
+    }
+
+    fn advance(&mut self) {
+        self.current = self.chars.next()
+    }
+
+    fn run(&mut self) {
+        self.advance();
+        loop {
+            match self.current() {
+                Some(c) => {
+                    match c {
+                        '(' => {
+                            self.tokens.push(OpenParen);
+                            self.advance();
+                        },
+                        ')' => {
+                            self.tokens.push(CloseParen);
+                            self.advance();
+                        },
+                        '+' => {
+                            self.tokens.push(Identifier(str::from_char(c)));
+                            self.advance();
+                        },
+                        '0'..'9' => {
+                            let val = self.parse_number();
+                            self.tokens.push(Integer(val))
+                        },
+                        ' ' => self.advance(),
+                        _   => fail!("unexpected character: {}", c),
+                    }
                 },
-            None =>
-                return tokens
+                None => return (),
+            }
+        };
+    }
+
+    fn parse_number(&mut self) -> int {
+        let mut s = String::new();
+        loop {
+            match self.current() {
+                Some(c) => {
+                    match c {
+                        '0'..'9' => {
+                            s.push_char(c);
+                            self.advance();
+                        },
+                        _ => break
+                    }
+                },
+                None => break
+            }
         }
-    };
+        from_str::from_str(s.as_slice()).unwrap()
+    }
 }
