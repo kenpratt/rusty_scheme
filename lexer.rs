@@ -3,7 +3,7 @@ use std::fmt;
 use std::iter;
 use std::from_str;
 
-pub fn tokenize(s: &str) -> Result<Vec<Token>, ParseError> {
+pub fn tokenize(s: &str) -> Result<Vec<Token>, SyntaxError> {
     Lexer::tokenize(s)
 }
 
@@ -17,21 +17,21 @@ pub enum Token {
     String(String),
 }
 
-pub struct ParseError {
+pub struct SyntaxError {
     message: String,
     line: uint,
     column: uint,
 }
 
-impl fmt::Show for ParseError {
+impl fmt::Show for SyntaxError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ParseError: {} (line: {}, column: {})", self.message, self.line, self.column)
+        write!(f, "SyntaxError: {} (line: {}, column: {})", self.message, self.line, self.column)
     }
 }
 
-macro_rules! parse_error(
+macro_rules! syntax_error(
     ($($arg:tt)*) => (
-        return Err(ParseError { message: format!($($arg)*), line: self.line, column: self.column })
+        return Err(SyntaxError { message: format!($($arg)*), line: self.line, column: self.column })
     )
 )
 
@@ -44,7 +44,7 @@ struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    fn tokenize(s: &str) -> Result<Vec<Token>, ParseError> {
+    fn tokenize(s: &str) -> Result<Vec<Token>, SyntaxError> {
         let mut lexer = Lexer { chars: s.chars().peekable(), current: None, tokens: Vec::new(), line: 1, column: 0 };
         try!(lexer.run());
         Ok(lexer.tokens)
@@ -71,7 +71,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn run(&mut self) -> Result<(), ParseError> {
+    fn run(&mut self) -> Result<(), SyntaxError> {
         self.advance();
         loop {
             match self.current() {
@@ -124,7 +124,7 @@ impl<'a> Lexer<'a> {
                             try!(self.parse_delimiter());
                         },
                         ' ' | '\x09' | '\x0a' | '\x0d' => self.advance(),
-                        _  => parse_error!("Unexpected character: {}", c),
+                        _  => syntax_error!("Unexpected character: {}", c),
                     }
                 },
                 None => break
@@ -133,7 +133,7 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    fn parse_number(&mut self) -> Result<int, ParseError> {
+    fn parse_number(&mut self) -> Result<int, SyntaxError> {
         let mut s = String::new();
         loop {
             match self.current() {
@@ -152,8 +152,8 @@ impl<'a> Lexer<'a> {
         Ok(from_str::from_str(s.as_slice()).unwrap())
     }
 
-    fn parse_boolean(&mut self) -> Result<bool, ParseError> {
-        if self.current() != Some('#') { parse_error!("Unexpected character: {}", self.current()) };
+    fn parse_boolean(&mut self) -> Result<bool, SyntaxError> {
+        if self.current() != Some('#') { syntax_error!("Unexpected character: {}", self.current()) };
         self.advance();
 
         match self.current() {
@@ -166,12 +166,12 @@ impl<'a> Lexer<'a> {
                 Ok(false)
             },
             _ => {
-                parse_error!("Unexpected character when looking for t/f: {}", self.current())
+                syntax_error!("Unexpected character when looking for t/f: {}", self.current())
             }
         }
     }
 
-    fn parse_identifier(&mut self) -> Result<String, ParseError> {
+    fn parse_identifier(&mut self) -> Result<String, SyntaxError> {
         let mut s = String::new();
         loop {
             match self.current() {
@@ -190,8 +190,8 @@ impl<'a> Lexer<'a> {
         Ok(s)
     }
 
-    fn parse_string(&mut self) -> Result<String, ParseError> {
-        if self.current() != Some('\"') { parse_error!("Unexpected character: {}", self.current()) };
+    fn parse_string(&mut self) -> Result<String, SyntaxError> {
+        if self.current() != Some('\"') { syntax_error!("Unexpected character: {}", self.current()) };
         self.advance();
 
         let mut s = String::new();
@@ -209,13 +209,13 @@ impl<'a> Lexer<'a> {
                         }
                     }
                 },
-                None => parse_error!("Expected end quote, but found EOF instead")
+                None => syntax_error!("Expected end quote, but found EOF instead")
             }
         }
         Ok(s)
     }
 
-    fn parse_delimiter(&mut self) -> Result<(), ParseError> {
+    fn parse_delimiter(&mut self) -> Result<(), SyntaxError> {
         match self.current() {
             Some(c) => {
                 match c {
@@ -224,7 +224,7 @@ impl<'a> Lexer<'a> {
                         self.advance();
                     },
                     ' ' | '\x09'| '\x0a' | '\x0d' => (),
-                    _ => parse_error!("Unexpected character when looking for a delimiter: {}", c),
+                    _ => syntax_error!("Unexpected character when looking for a delimiter: {}", c),
                 }
             },
             None => ()
@@ -280,7 +280,7 @@ fn test_strings() {
     assert_eq!(Lexer::tokenize("\"a _ $ snthoeau(*&G#$()*^!\"").unwrap(),
                vec![String("a _ $ snthoeau(*&G#$()*^!".to_str())]);
     assert_eq!(Lexer::tokenize("\"truncated").err().unwrap().to_str().as_slice(),
-               "ParseError: Expected end quote, but found EOF instead (line: 1, column: 11)");
+               "SyntaxError: Expected end quote, but found EOF instead (line: 1, column: 11)");
 }
 
 #[test]
@@ -293,22 +293,22 @@ fn test_whitespace() {
 #[test]
 fn test_bad_syntax() {
     assert_eq!(Lexer::tokenize("(\\)").err().unwrap().to_str().as_slice(),
-               "ParseError: Unexpected character: \\ (line: 1, column: 2)");
+               "SyntaxError: Unexpected character: \\ (line: 1, column: 2)");
 }
 
 #[test]
 fn test_delimiter_checking() {
     assert_eq!(Lexer::tokenize("(+-)").err().unwrap().to_str().as_slice(),
-               "ParseError: Unexpected character when looking for a delimiter: - (line: 1, column: 3)");
+               "SyntaxError: Unexpected character when looking for a delimiter: - (line: 1, column: 3)");
 
     assert_eq!(Lexer::tokenize("(-22+)").err().unwrap().to_str().as_slice(),
-               "ParseError: Unexpected character when looking for a delimiter: + (line: 1, column: 5)");
+               "SyntaxError: Unexpected character when looking for a delimiter: + (line: 1, column: 5)");
 
     assert_eq!(Lexer::tokenize("(22+)").err().unwrap().to_str().as_slice(),
-               "ParseError: Unexpected character when looking for a delimiter: + (line: 1, column: 4)");
+               "SyntaxError: Unexpected character when looking for a delimiter: + (line: 1, column: 4)");
 
     assert_eq!(Lexer::tokenize("(+ 2 3)\n(+ 1 2-)").err().unwrap().to_str().as_slice(),
-               "ParseError: Unexpected character when looking for a delimiter: - (line: 2, column: 7)");
+               "SyntaxError: Unexpected character when looking for a delimiter: - (line: 2, column: 7)");
 }
 
 #[test]
