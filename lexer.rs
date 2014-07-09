@@ -235,84 +235,84 @@ impl<'a> Lexer<'a> {
 
 #[test]
 fn test_simple_lexing() {
-    assert_eq!(Lexer::tokenize("(+ 2 3)").unwrap(),
+    assert_eq!(tokenize("(+ 2 3)").unwrap(),
                vec![OpenParen, Identifier("+".to_str()), Integer(2), Integer(3), CloseParen]);
 }
 
 #[test]
 fn test_multi_digit_integers() {
-    assert_eq!(Lexer::tokenize("(+ 21 325)").unwrap(),
+    assert_eq!(tokenize("(+ 21 325)").unwrap(),
                vec![OpenParen, Identifier("+".to_str()), Integer(21), Integer(325), CloseParen]);
 }
 
 #[test]
 fn test_subtraction() {
-    assert_eq!(Lexer::tokenize("(- 7 42)").unwrap(),
+    assert_eq!(tokenize("(- 7 42)").unwrap(),
                vec![OpenParen, Identifier("-".to_str()), Integer(7), Integer(42), CloseParen]);
 }
 
 #[test]
 fn test_negative_integers() {
-    assert_eq!(Lexer::tokenize("(+ -8 +2 -33)").unwrap(),
+    assert_eq!(tokenize("(+ -8 +2 -33)").unwrap(),
                vec![OpenParen, Identifier("+".to_str()), Integer(-8), Integer(2), Integer(-33), CloseParen]);
 }
 
 #[test]
 fn test_booleans() {
-    assert_eq!(Lexer::tokenize("#t").unwrap(),
+    assert_eq!(tokenize("#t").unwrap(),
                vec![Boolean(true)]);
-    assert_eq!(Lexer::tokenize("#f").unwrap(),
+    assert_eq!(tokenize("#f").unwrap(),
                vec![Boolean(false)]);
 }
 
 #[test]
 fn test_identifiers() {
     for identifier in ["*", "<", "<=", "if", "while", "$t$%*=:t059s"].iter() {
-        assert_eq!(Lexer::tokenize(*identifier).unwrap(),
+        assert_eq!(tokenize(*identifier).unwrap(),
                    vec![Identifier(identifier.to_str())]);
     }
 }
 
 #[test]
 fn test_strings() {
-    assert_eq!(Lexer::tokenize("\"hello\"").unwrap(),
+    assert_eq!(tokenize("\"hello\"").unwrap(),
                vec![String("hello".to_str())]);
-    assert_eq!(Lexer::tokenize("\"a _ $ snthoeau(*&G#$()*^!\"").unwrap(),
+    assert_eq!(tokenize("\"a _ $ snthoeau(*&G#$()*^!\"").unwrap(),
                vec![String("a _ $ snthoeau(*&G#$()*^!".to_str())]);
-    assert_eq!(Lexer::tokenize("\"truncated").err().unwrap().to_str().as_slice(),
+    assert_eq!(tokenize("\"truncated").err().unwrap().to_str().as_slice(),
                "SyntaxError: Expected end quote, but found EOF instead (line: 1, column: 11)");
 }
 
 #[test]
 fn test_whitespace() {
-    assert_eq!(Lexer::tokenize("(+ 1 1)\n(+\n    2\t2 \n )\r\n  \n").unwrap(),
+    assert_eq!(tokenize("(+ 1 1)\n(+\n    2\t2 \n )\r\n  \n").unwrap(),
                vec![OpenParen, Identifier("+".to_str()), Integer(1), Integer(1), CloseParen,
                     OpenParen, Identifier("+".to_str()), Integer(2), Integer(2), CloseParen]);
 }
 
 #[test]
 fn test_bad_syntax() {
-    assert_eq!(Lexer::tokenize("(\\)").err().unwrap().to_str().as_slice(),
+    assert_eq!(tokenize("(\\)").err().unwrap().to_str().as_slice(),
                "SyntaxError: Unexpected character: \\ (line: 1, column: 2)");
 }
 
 #[test]
 fn test_delimiter_checking() {
-    assert_eq!(Lexer::tokenize("(+-)").err().unwrap().to_str().as_slice(),
+    assert_eq!(tokenize("(+-)").err().unwrap().to_str().as_slice(),
                "SyntaxError: Unexpected character when looking for a delimiter: - (line: 1, column: 3)");
 
-    assert_eq!(Lexer::tokenize("(-22+)").err().unwrap().to_str().as_slice(),
+    assert_eq!(tokenize("(-22+)").err().unwrap().to_str().as_slice(),
                "SyntaxError: Unexpected character when looking for a delimiter: + (line: 1, column: 5)");
 
-    assert_eq!(Lexer::tokenize("(22+)").err().unwrap().to_str().as_slice(),
+    assert_eq!(tokenize("(22+)").err().unwrap().to_str().as_slice(),
                "SyntaxError: Unexpected character when looking for a delimiter: + (line: 1, column: 4)");
 
-    assert_eq!(Lexer::tokenize("(+ 2 3)\n(+ 1 2-)").err().unwrap().to_str().as_slice(),
+    assert_eq!(tokenize("(+ 2 3)\n(+ 1 2-)").err().unwrap().to_str().as_slice(),
                "SyntaxError: Unexpected character when looking for a delimiter: - (line: 2, column: 7)");
 }
 
 #[test]
 fn test_complex_code_block() {
-    assert_eq!(Lexer::tokenize("(define (list-of-squares n)\n  (let loop ((i n) (res (list)))\n    (if (< i 0)\n        res\n        (loop (- i 1) (cons (* i i) res)))))").unwrap(),
+    assert_eq!(tokenize("(define (list-of-squares n)\n  (let loop ((i n) (res (list)))\n    (if (< i 0)\n        res\n        (loop (- i 1) (cons (* i i) res)))))").unwrap(),
                vec![OpenParen, Identifier("define".to_str()), OpenParen, Identifier("list-of-squares".to_str()), Identifier("n".to_str()), CloseParen, OpenParen, Identifier("let".to_str()), Identifier("loop".to_str()), OpenParen, OpenParen, Identifier("i".to_str()), Identifier("n".to_str()), CloseParen, OpenParen, Identifier("res".to_str()), OpenParen, Identifier("list".to_str()), CloseParen, CloseParen, CloseParen, OpenParen, Identifier("if".to_str()), OpenParen, Identifier("<".to_str()), Identifier("i".to_str()), Integer(0), CloseParen, Identifier("res".to_str()), OpenParen, Identifier("loop".to_str()), OpenParen, Identifier("-".to_str()), Identifier("i".to_str()), Integer(1), CloseParen, OpenParen, Identifier("cons".to_str()), OpenParen, Identifier("*".to_str()), Identifier("i".to_str()), Identifier("i".to_str()), CloseParen, Identifier("res".to_str()), CloseParen, CloseParen, CloseParen, CloseParen, CloseParen]);
 }
