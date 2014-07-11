@@ -53,33 +53,37 @@ fn evaluate_expression(nodes: Vec<Node>) -> Result<Node, RuntimeError> {
     let first = nodes.get(0);
     match *first {
         parser::Identifier(ref func) => {
-            if *func == "+".to_str() {
-                if nodes.len() < 3 {
-                    runtime_error!("Must supply at least two arguments to +: {}", nodes);
-                }
-                let mut sum = 0;
-                for n in nodes.tailn(1).iter() {
-                    match *n {
-                        parser::Integer(x) => sum += x,
-                        _ => runtime_error!("Unexpected node during +: {}", n)
+            match func.as_slice() {
+                "+" => {
+                    if nodes.len() < 3 {
+                        runtime_error!("Must supply at least two arguments to +: {}", nodes);
+                    }
+                    let mut sum = 0;
+                    for n in nodes.tailn(1).iter() {
+                        match *n {
+                            parser::Integer(x) => sum += x,
+                            _ => runtime_error!("Unexpected node during +: {}", n)
+                        };
                     };
-                };
-                Ok(parser::Integer(sum))
-            } else if *func == "-".to_str() {
-                if nodes.len() != 3 {
-                    runtime_error!("Must supply exactly two arguments to -: {}", nodes);
+                    Ok(parser::Integer(sum))
+                },
+                "-" => {
+                    if nodes.len() != 3 {
+                        runtime_error!("Must supply exactly two arguments to -: {}", nodes);
+                    }
+                    let mut result = match *nodes.get(1) {
+                        parser::Integer(x) => x,
+                        _ => runtime_error!("Unexpected node during -: {}", nodes)
+                    };
+                    result -= match *nodes.get(2) {
+                        parser::Integer(x) => x,
+                        _ => runtime_error!("Unexpected node during -: {}", nodes)
+                    };
+                    Ok(parser::Integer(result))
+                },
+                _ => {
+                    runtime_error!("Unknown function: {}", func);
                 }
-                let mut result = match *nodes.get(1) {
-                    parser::Integer(x) => x,
-                    _ => runtime_error!("Unexpected node during -: {}", nodes)
-                };
-                result -= match *nodes.get(2) {
-                    parser::Integer(x) => x,
-                    _ => runtime_error!("Unexpected node during -: {}", nodes)
-                };
-                Ok(parser::Integer(result))
-            } else {
-                runtime_error!("Unknown function: {}", func);
             }
         },
         _ => {
