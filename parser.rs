@@ -4,11 +4,11 @@ use lexer::Token;
 use std::fmt;
 use std::slice;
 
-pub fn parse(tokens: Vec<Token>) -> Result<Vec<Node>, ParseError> {
+pub fn parse(tokens: &Vec<Token>) -> Result<Vec<Node>, ParseError> {
     Parser::parse(tokens)
 }
 
-#[deriving(Show, PartialEq)]
+#[deriving(Show, PartialEq, Clone)]
 pub enum Node {
     Identifier(String),
     Integer(int),
@@ -38,7 +38,7 @@ struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn parse(tokens: Vec<Token>) -> Result<Vec<Node>, ParseError> {
+    fn parse(tokens: &Vec<Token>) -> Result<Vec<Node>, ParseError> {
         let mut parser = Parser { tokens: tokens.iter() };
         parser.run(0)
     }
@@ -88,24 +88,24 @@ impl<'a> Parser<'a> {
 
 #[test]
 fn test_simple() {
-    assert_eq!(parse(vec![lexer::OpenParen, lexer::Identifier("+".to_str()), lexer::CloseParen]).unwrap(),
+    assert_eq!(parse(&vec![lexer::OpenParen, lexer::Identifier("+".to_str()), lexer::CloseParen]).unwrap(),
                vec![List(vec![Identifier("+".to_str())])]);
 }
 
 #[test]
 fn test_nested() {
-    assert_eq!(parse(vec![lexer::OpenParen, lexer::Identifier("+".to_str()), lexer::OpenParen, lexer::Identifier("+".to_str()), lexer::Integer(1), lexer::OpenParen, lexer::Identifier("+".to_str()), lexer::Integer(3), lexer::Integer(4), lexer::CloseParen, lexer::CloseParen, lexer::Integer(5), lexer::CloseParen]).unwrap(),
+    assert_eq!(parse(&vec![lexer::OpenParen, lexer::Identifier("+".to_str()), lexer::OpenParen, lexer::Identifier("+".to_str()), lexer::Integer(1), lexer::OpenParen, lexer::Identifier("+".to_str()), lexer::Integer(3), lexer::Integer(4), lexer::CloseParen, lexer::CloseParen, lexer::Integer(5), lexer::CloseParen]).unwrap(),
                vec![List(vec![Identifier("+".to_str()), List(vec![Identifier("+".to_str()), Integer(1), List(vec![Identifier("+".to_str()), Integer(3), Integer(4)])]), Integer(5)])]);
 }
 
 #[test]
 fn test_bad_syntax() {
-    assert_eq!(parse(vec![lexer::CloseParen]).err().unwrap().to_str().as_slice(),
+    assert_eq!(parse(&vec![lexer::CloseParen]).err().unwrap().to_str().as_slice(),
                "ParseError: Unexpected close paren, depth: 0");
-    assert_eq!(parse(vec![lexer::OpenParen, lexer::OpenParen, lexer::CloseParen]).err().unwrap().to_str().as_slice(),
+    assert_eq!(parse(&vec![lexer::OpenParen, lexer::OpenParen, lexer::CloseParen]).err().unwrap().to_str().as_slice(),
                "ParseError: Unexpected end of input, depth: 1");
-    assert_eq!(parse(vec![lexer::OpenParen, lexer::CloseParen, lexer::CloseParen]).err().unwrap().to_str().as_slice(),
+    assert_eq!(parse(&vec![lexer::OpenParen, lexer::CloseParen, lexer::CloseParen]).err().unwrap().to_str().as_slice(),
                "ParseError: Unexpected close paren, depth: 0");
-    assert_eq!(parse(vec![lexer::OpenParen, lexer::OpenParen, lexer::CloseParen, lexer::OpenParen, lexer::OpenParen, lexer::CloseParen]).err().unwrap().to_str().as_slice(),
+    assert_eq!(parse(&vec![lexer::OpenParen, lexer::OpenParen, lexer::CloseParen, lexer::OpenParen, lexer::OpenParen, lexer::CloseParen]).err().unwrap().to_str().as_slice(),
                "ParseError: Unexpected end of input, depth: 2");
 }

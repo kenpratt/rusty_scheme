@@ -3,7 +3,7 @@ use parser::Node;
 
 use std::fmt;
 
-pub fn interpret(nodes: Vec<Node>) -> Result<Vec<Node>, RuntimeError> {
+pub fn interpret(nodes: &Vec<Node>) -> Result<Vec<Node>, RuntimeError> {
     evaluate_nodes(nodes)
 }
 
@@ -23,30 +23,30 @@ macro_rules! runtime_error(
     )
 )
 
-fn evaluate_nodes(nodes: Vec<Node>) -> Result<Vec<Node>, RuntimeError> {
+fn evaluate_nodes(nodes: &Vec<Node>) -> Result<Vec<Node>, RuntimeError> {
     let mut results = Vec::new();
-    for node in nodes.move_iter() {
+    for node in nodes.iter() {
         let res = try!(evaluate_node(node));
         results.push(res);
     };
     Ok(results)
 }
 
-fn evaluate_node(node: Node) -> Result<Node, RuntimeError> {
+fn evaluate_node(node: &Node) -> Result<Node, RuntimeError> {
     match node {
-        parser::List(vec) => {
+        &parser::List(ref vec) => {
             if vec.len() > 0 {
                 let evaluated = try!(evaluate_nodes(vec));
-                evaluate_expression(evaluated)
+                evaluate_expression(&evaluated)
             } else {
-                Ok(parser::List(vec))
+                Ok(parser::List(vec![]))
             }
         },
-        _ => Ok(node)
+        _ => Ok(node.clone())
     }
 }
 
-fn evaluate_expression(nodes: Vec<Node>) -> Result<Node, RuntimeError> {
+fn evaluate_expression(nodes: &Vec<Node>) -> Result<Node, RuntimeError> {
     if nodes.len() == 0 {
         runtime_error!("Can't evaluate an empty expression: {}", nodes);
     }
