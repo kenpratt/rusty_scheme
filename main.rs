@@ -9,6 +9,7 @@ fn main() {
     run("(22+)");
     run("(+ 2 3)\n(+ 1 2-)");
     run("(+ 2 (- (+ 9 1) 4))");
+    run("(define x 2) (+ x x x)");
 }
 
 fn run(input: &str) {
