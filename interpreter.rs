@@ -17,6 +17,9 @@ pub enum Value {
     List(Vec<Value>),
 }
 
+// null == empty list
+macro_rules! null { () => (List(vec![])) }
+
 pub struct RuntimeError {
     message: String,
 }
@@ -78,7 +81,7 @@ fn evaluate_node(node: &Node, env: &mut Environment) -> Result<Value, RuntimeErr
             if vec.len() > 0 {
                 evaluate_expression(vec, env)
             } else {
-                Ok(List(vec![]))
+                Ok(null!())
             }
         }
     }
@@ -102,7 +105,7 @@ fn evaluate_expression(nodes: &Vec<Node>, env: &mut Environment) -> Result<Value
                     };
                     let val = try!(evaluate_node(nodes.get(2), env));
                     env.set(name.clone(), val);
-                    Ok(Integer(0)) // TODO change to more sensible return value
+                    Ok(null!())
                 },
                 "+" => {
                     if nodes.len() < 3 {
@@ -148,5 +151,5 @@ fn evaluate_expression(nodes: &Vec<Node>, env: &mut Environment) -> Result<Value
 #[test]
 fn test_global_variables() {
     assert_eq!(interpret(&vec![parser::List(vec![parser::Identifier("define".to_str()), parser::Identifier("x".to_str()), parser::Integer(2)]), parser::List(vec![parser::Identifier("+".to_str()), parser::Identifier("x".to_str()), parser::Identifier("x".to_str()), parser::Identifier("x".to_str())])]).unwrap(),
-               vec![Integer(0), Integer(6)]);
+               vec![null!(), Integer(6)]);
 }
