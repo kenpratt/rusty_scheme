@@ -4,7 +4,7 @@ use parser::Node;
 use std::fmt;
 use std::collections::HashMap;
 
-pub fn interpret(nodes: &Vec<Node>) -> Result<Vec<Value>, RuntimeError> {
+pub fn interpret(nodes: &Vec<Node>) -> Result<Value, RuntimeError> {
     let mut env = Environment::root();
     evaluate_nodes(nodes, &mut env)
 }
@@ -57,13 +57,12 @@ impl Environment {
     }
 }
 
-fn evaluate_nodes(nodes: &Vec<Node>, env: &mut Environment) -> Result<Vec<Value>, RuntimeError> {
-    let mut results = Vec::new();
+fn evaluate_nodes(nodes: &Vec<Node>, env: &mut Environment) -> Result<Value, RuntimeError> {
+    let mut result = null!();
     for node in nodes.iter() {
-        let res = try!(evaluate_node(node, env));
-        results.push(res);
+        result = try!(evaluate_node(node, env));
     };
-    Ok(results)
+    Ok(result)
 }
 
 fn evaluate_node(node: &Node, env: &mut Environment) -> Result<Value, RuntimeError> {
@@ -151,5 +150,5 @@ fn evaluate_expression(nodes: &Vec<Node>, env: &mut Environment) -> Result<Value
 #[test]
 fn test_global_variables() {
     assert_eq!(interpret(&vec![parser::List(vec![parser::Identifier("define".to_str()), parser::Identifier("x".to_str()), parser::Integer(2)]), parser::List(vec![parser::Identifier("+".to_str()), parser::Identifier("x".to_str()), parser::Identifier("x".to_str()), parser::Identifier("x".to_str())])]).unwrap(),
-               vec![null!(), Integer(6)]);
+               Integer(6));
 }
