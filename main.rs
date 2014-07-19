@@ -11,6 +11,7 @@ fn main() {
     run("(+ 2 (- (+ 9 1) 4))");
     run("(define x 2) (+ x x x)");
     run("(define double (lambda (x) (+ x x))) (double 8)");
+    run("(lambda (x) x)");
 }
 
 fn run(input: &str) {

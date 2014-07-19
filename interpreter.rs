@@ -11,7 +11,7 @@ pub fn interpret(nodes: &Vec<Node>) -> Result<Value, RuntimeError> {
     evaluate_nodes(nodes, env)
 }
 
-#[deriving(Show, PartialEq, Clone)]
+#[deriving(PartialEq, Clone)]
 pub enum Value {
     Integer(int),
     Boolean(bool),
@@ -22,6 +22,18 @@ pub enum Value {
 
 // null == empty list
 macro_rules! null { () => (List(vec![])) }
+
+impl fmt::Show for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Integer(val) => write!(f, "{}", val),
+            Boolean(val) => write!(f, "{}", val),
+            String(ref val) => write!(f, "{}", val),
+            List(ref val) => write!(f, "{}", val),
+            Procedure(_, _) => write!(f, "#<procedure>")
+        }
+    }
+}
 
 pub struct RuntimeError {
     message: String,
