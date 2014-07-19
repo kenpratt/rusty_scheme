@@ -27,8 +27,8 @@ impl fmt::Show for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Integer(val) => write!(f, "{}", val),
-            Boolean(val) => write!(f, "{}", val),
-            String(ref val) => write!(f, "{}", val),
+            Boolean(val) => write!(f, "#{}", if val { "t" } else { "f" }),
+            String(ref val) => write!(f, "\"{}\"", val),
             List(ref val) => write!(f, "{}", val),
             Procedure(_, _) => write!(f, "#<procedure>")
         }

@@ -6,12 +6,6 @@ mod interpreter;
 
 fn main() {
     run("(+ 2 3)");
-    run("(22+)");
-    run("(+ 2 3)\n(+ 1 2-)");
-    run("(+ 2 (- (+ 9 1) 4))");
-    run("(define x 2) (+ x x x)");
-    run("(define double (lambda (x) (+ x x))) (double 8)");
-    run("(lambda (x) x)");
 }
 
 fn run(input: &str) {
@@ -38,4 +32,54 @@ fn execute(input: &str) -> Result<String, String> {
     };
 
     Ok(format!("{}", result))
+}
+
+#[test]
+fn test_basic_identities() {
+    assert_eq!(execute("1").unwrap().as_slice(),
+               "1");
+    assert_eq!(execute("#f").unwrap().as_slice(),
+               "#f");
+    assert_eq!(execute("\"hi\"").unwrap().as_slice(),
+               "\"hi\"");
+    assert_eq!(execute("(lambda (x) x)").unwrap().as_slice(),
+               "#<procedure>");
+}
+
+#[test]
+fn test_simple_function() {
+    assert_eq!(execute("(+ 2 3)").unwrap().as_slice(),
+               "5");
+}
+
+#[test]
+fn test_multiple_expression_return() {
+    assert_eq!(execute("(+ 2 3)\n(+ 1 2)").unwrap().as_slice(),
+               "3");
+}
+
+#[test]
+fn test_nested_expressions() {
+    assert_eq!(execute("(+ 2 (- (+ 9 1) 4))").unwrap().as_slice(),
+               "8");
+}
+
+#[test]
+fn test_variable_definition() {
+    assert_eq!(execute("(define x 2) (+ x x x)").unwrap().as_slice(),
+               "6");
+}
+
+#[test]
+fn test_procedure_definition() {
+    assert_eq!(execute("(define double (lambda (x) (+ x x))) (double 8)").unwrap().as_slice(),
+               "16");
+}
+
+#[test]
+fn test_bad_syntax() {
+    assert_eq!(execute("(22+)").err().unwrap().as_slice(),
+               "SyntaxError: Unexpected character when looking for a delimiter: + (line: 1, column: 4)");
+    assert_eq!(execute("(+ 2 3)\n(+ 1 2-)").err().unwrap().as_slice(),
+               "SyntaxError: Unexpected character when looking for a delimiter: - (line: 2, column: 7)");
 }
