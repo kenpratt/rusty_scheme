@@ -121,6 +121,18 @@ fn test_boolean_operators() {
 }
 
 #[test]
+fn test_quoting() {
+    assert_execute!("(quote #t)", "#t");
+    assert_execute!("(quote 1)", "1");
+    assert_execute!("(quote sym)", "'sym");
+    assert_execute!("(quote \"hi\")", "\"hi\"");
+    assert_execute!("(quote (1 2))", "'(1 2)");
+    assert_execute!("(quote (a b))", "'(a b)");
+    assert_execute!("(quote (a b (c (d) e ())))", "'(a b (c (d) e ()))");
+    assert_execute!("(quote (a (quote b)))", "'(a (quote b))");
+}
+
+#[test]
 fn test_bad_syntax() {
     assert_execute_fail!("(22+)", "SyntaxError: Unexpected character when looking for a delimiter: + (line: 1, column: 4)");
     assert_execute_fail!("(+ 2 3)\n(+ 1 2-)", "SyntaxError: Unexpected character when looking for a delimiter: - (line: 2, column: 7)");

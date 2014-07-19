@@ -13,6 +13,7 @@ pub fn interpret(nodes: &Vec<Node>) -> Result<Value, RuntimeError> {
 
 #[deriving(PartialEq, Clone)]
 pub enum Value {
+    Symbol(String),
     Integer(int),
     Boolean(bool),
     String(String),
@@ -25,12 +26,39 @@ macro_rules! null { () => (List(vec![])) }
 
 impl fmt::Show for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_str())
+    }
+}
+
+impl Value {
+    fn to_str(&self) -> String {
+        match self {
+            &Symbol(_) => format!("'{}", self.to_raw_str()),
+            &List(_) => format!("'{}", self.to_raw_str()),
+            _ => self.to_raw_str()
+        }
+    }
+
+    fn to_raw_str(&self) -> String {
         match *self {
-            Integer(val) => write!(f, "{}", val),
-            Boolean(val) => write!(f, "#{}", if val { "t" } else { "f" }),
-            String(ref val) => write!(f, "\"{}\"", val),
-            List(ref val) => write!(f, "{}", val),
-            Procedure(_, _) => write!(f, "#<procedure>")
+            Symbol(ref val) => format!("{}", val),
+            Integer(val) => format!("{}", val),
+            Boolean(val) => format!("#{}", if val { "t" } else { "f" }),
+            String(ref val) => format!("\"{}\"", val),
+            List(ref val) => {
+                let mut s = String::new();
+                let mut first = true;
+                for n in val.iter() {
+                    if first {
+                        first = false;
+                    } else {
+                        s = s.append(" ");
+                    }
+                    s = s.append(n.to_raw_str().as_slice());
+                }
+                format!("({})", s)
+            }
+            Procedure(_, _) => format!("#<procedure>")
         }
     }
 }
@@ -114,6 +142,23 @@ fn evaluate_node(node: &Node, env: Rc<RefCell<Environment>>) -> Result<Value, Ru
             } else {
                 Ok(null!())
             }
+        }
+    }
+}
+
+fn quote_node(node: &Node, env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    match node {
+        &parser::Identifier(ref v) => Ok(Symbol(v.clone())),
+        &parser::Integer(v) => Ok(Integer(v)),
+        &parser::Boolean(v) => Ok(Boolean(v)),
+        &parser::String(ref v) => Ok(String(v.clone())),
+        &parser::List(ref vec) => {
+            let mut res = vec![];
+            for n in vec.iter() {
+                let v = try!(quote_node(n, env.clone()));
+                res.push(v);
+            }
+            Ok(List(res))
         }
     }
 }
@@ -241,6 +286,12 @@ fn evaluate_expression(nodes: &Vec<Node>, env: Rc<RefCell<Environment>>) -> Resu
                     };
                     Ok(Integer(result))
                 },
+                "quote" => {
+                    if nodes.len() != 2 {
+                        runtime_error!("Must supply exactly one argument to quote: {}", nodes);
+                    }
+                    quote_node(nodes.get(1), env.clone())
+                }
                 "error" => {
                     if nodes.len() != 2 {
                         runtime_error!("Must supply exactly one arguments to error: {}", nodes);
