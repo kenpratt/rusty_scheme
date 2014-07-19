@@ -11,6 +11,7 @@ pub fn tokenize(s: &str) -> Result<Vec<Token>, SyntaxError> {
 pub enum Token {
     OpenParen,
     CloseParen,
+    Quote,
     Identifier(String),
     Integer(int),
     Boolean(bool),
@@ -83,6 +84,10 @@ impl<'a> Lexer<'a> {
                         },
                         ')' => {
                             self.tokens.push(CloseParen);
+                            self.advance();
+                        },
+                        '\'' => {
+                            self.tokens.push(Quote);
                             self.advance();
                         },
                         '+' | '-' => {
@@ -309,6 +314,16 @@ fn test_delimiter_checking() {
 
     assert_eq!(tokenize("(+ 2 3)\n(+ 1 2-)").err().unwrap().to_str().as_slice(),
                "SyntaxError: Unexpected character when looking for a delimiter: - (line: 2, column: 7)");
+}
+
+#[test]
+fn test_quoting() {
+    assert_eq!(tokenize("'(a)").unwrap(),
+               vec![Quote, OpenParen, Identifier("a".to_str()), CloseParen]);
+    assert_eq!(tokenize("'('a 'b)").unwrap(),
+               vec![Quote, OpenParen, Quote, Identifier("a".to_str()), Quote, Identifier("b".to_str()), CloseParen]);
+    assert_eq!(tokenize("(list 'a b)").unwrap(),
+               vec![OpenParen, Identifier("list".to_str()), Quote, Identifier("a".to_str()), Identifier("b".to_str()), CloseParen]);
 }
 
 #[test]

@@ -130,6 +130,9 @@ fn test_quoting() {
     assert_execute!("(quote (a b))", "'(a b)");
     assert_execute!("(quote (a b (c (d) e ())))", "'(a b (c (d) e ()))");
     assert_execute!("(quote (a (quote b)))", "'(a (quote b))");
+    assert_execute!("'(1 2)", "'(1 2)");
+    assert_execute!("'(a b (c (d) e ()))", "'(a b (c (d) e ()))");
+    assert_execute!("'(1 '2)", "'(1 (quote 2))");
 }
 
 #[test]

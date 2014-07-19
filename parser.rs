@@ -40,46 +40,66 @@ struct Parser<'a> {
 impl<'a> Parser<'a> {
     fn parse(tokens: &Vec<Token>) -> Result<Vec<Node>, ParseError> {
         let mut parser = Parser { tokens: tokens.iter() };
-        parser.run(0)
+        parser.parse_nodes(0)
     }
 
-    fn run(&mut self, depth: uint) -> Result<Vec<Node>, ParseError> {
+    fn parse_nodes(&mut self, depth: uint) -> Result<Vec<Node>, ParseError> {
         let mut vec = Vec::new();
         loop {
-            match self.tokens.next() {
-                Some(token) => {
-                    match *token {
-                        lexer::OpenParen => {
-                            let inner = try!(self.run(depth + 1));
-                            vec.push(List(inner));
-                        },
-                        lexer::CloseParen => {
-                            if depth > 0 {
-                                return Ok(vec);
-                            } else {
-                                parse_error!("Unexpected close paren, depth: {}", depth);
-                            }
-                        },
-                        lexer::Identifier(ref val) => {
-                            vec.push(Identifier(val.clone()));
-                        },
-                        lexer::Integer(ref val) => {
-                            vec.push(Integer(val.clone()));
-                        },
-                        lexer::Boolean(ref val) => {
-                            vec.push(Boolean(val.clone()));
-                        },
-                        lexer::String(ref val) => {
-                            vec.push(String(val.clone()));
-                        }
-                    };
+            match try!(self.parse_node(depth)) {
+                Some(node) => {
+                    vec.push(node);
                 },
                 None => {
-                    if depth == 0 {
-                        return Ok(vec);
-                    } else {
-                        parse_error!("Unexpected end of input, depth: {}", depth);
+                    return Ok(vec);
+                }
+            }
+        }
+    }
+
+    fn parse_node(&mut self, depth: uint) -> Result<Option<Node>, ParseError> {
+        match self.tokens.next() {
+            Some(token) => {
+                match *token {
+                    lexer::OpenParen => {
+                        let inner = try!(self.parse_nodes(depth + 1));
+                        Ok(Some(List(inner)))
+                    },
+                    lexer::CloseParen => {
+                        if depth > 0 {
+                            Ok(None)
+                        } else {
+                            parse_error!("Unexpected close paren, depth: {}", depth)
+                        }
+                    },
+                    lexer::Quote => {
+                        match try!(self.parse_node(depth)) {
+                            Some(inner) => {
+                                let quoted = List(vec![Identifier("quote".to_str()), inner]);
+                                Ok(Some(quoted))
+                            },
+                            None => parse_error!("Missing quoted value, depth: {}", depth)
+                        }
+                    },
+                    lexer::Identifier(ref val) => {
+                        Ok(Some(Identifier(val.clone())))
+                    },
+                    lexer::Integer(ref val) => {
+                        Ok(Some(Integer(val.clone())))
+                    },
+                    lexer::Boolean(ref val) => {
+                        Ok(Some(Boolean(val.clone())))
+                    },
+                    lexer::String(ref val) => {
+                        Ok(Some(String(val.clone())))
                     }
+                }
+            },
+            None => {
+                if depth == 0 {
+                    Ok(None)
+                } else {
+                    parse_error!("Unexpected end of input, depth: {}", depth)
                 }
             }
         }
@@ -96,6 +116,14 @@ fn test_simple() {
 fn test_nested() {
     assert_eq!(parse(&vec![lexer::OpenParen, lexer::Identifier("+".to_str()), lexer::OpenParen, lexer::Identifier("+".to_str()), lexer::Integer(1), lexer::OpenParen, lexer::Identifier("+".to_str()), lexer::Integer(3), lexer::Integer(4), lexer::CloseParen, lexer::CloseParen, lexer::Integer(5), lexer::CloseParen]).unwrap(),
                vec![List(vec![Identifier("+".to_str()), List(vec![Identifier("+".to_str()), Integer(1), List(vec![Identifier("+".to_str()), Integer(3), Integer(4)])]), Integer(5)])]);
+}
+
+#[test]
+fn test_quote() {
+    assert_eq!(parse(&vec![lexer::Quote, lexer::OpenParen, lexer::Identifier("a".to_str()), lexer::CloseParen]).unwrap(),
+               vec![List(vec![Identifier("quote".to_str()), List(vec![Identifier("a".to_str())])])]);
+    assert_eq!(parse(&vec![lexer::OpenParen, lexer::Identifier("list".to_str()), lexer::Quote, lexer::Identifier("a".to_str()), lexer::Identifier("b".to_str()), lexer::CloseParen]).unwrap(),
+               vec![List(vec![Identifier("list".to_str()), List(vec![Identifier("quote".to_str()), Identifier("a".to_str())]), Identifier("b".to_str())])]);
 }
 
 #[test]
