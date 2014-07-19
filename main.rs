@@ -77,6 +77,18 @@ fn test_duplicate_variable_definition() {
 }
 
 #[test]
+fn test_variable_modification() {
+    assert_eq!(execute("(define x 2) (set! x 3) (+ x x x)").unwrap().as_slice(),
+               "9");
+}
+
+#[test]
+fn test_unknown_variable_modification() {
+    assert_eq!(execute("(set! x 3)").err().unwrap().as_slice(),
+               "RuntimeError: Can't set! an undefined variable: x");
+}
+
+#[test]
 fn test_procedure_definition() {
     assert_eq!(execute("(define double (lambda (x) (+ x x))) (double 8)").unwrap().as_slice(),
                "16");
