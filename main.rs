@@ -71,6 +71,12 @@ fn test_variable_definition() {
 }
 
 #[test]
+fn test_duplicate_variable_definition() {
+    assert_eq!(execute("(define x 2) (define x 3)").err().unwrap().as_slice(),
+               "RuntimeError: Duplicate define: x");
+}
+
+#[test]
 fn test_procedure_definition() {
     assert_eq!(execute("(define double (lambda (x) (+ x x))) (double 8)").unwrap().as_slice(),
                "16");
