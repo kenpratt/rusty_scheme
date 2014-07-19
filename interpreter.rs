@@ -220,6 +220,13 @@ fn evaluate_expression(nodes: &Vec<Node>, env: Rc<RefCell<Environment>>) -> Resu
                     };
                     Ok(Integer(result))
                 },
+                "error" => {
+                    if nodes.len() != 2 {
+                        runtime_error!("Must supply exactly one arguments to error: {}", nodes);
+                    }
+                    let e = try!(evaluate_node(nodes.get(1), env.clone()));
+                    runtime_error!("{}", e);
+                },
                 _ => {
                     match env.borrow().get(func) {
                         Some(Procedure(args, body)) => {
