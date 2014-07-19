@@ -103,6 +103,24 @@ fn test_conditional_execution_doesnt_run_other_case() {
 }
 
 #[test]
+fn test_boolean_operators() {
+    assert_execute!("(and)", "#t");
+    assert_execute!("(and #t)", "#t");
+    assert_execute!("(and 1)", "1");
+    assert_execute!("(and 1 2 3)", "3");
+    assert_execute!("(and 1 #f 3)", "#f");
+    assert_execute!("(and 1 #f (error \"bad\"))", "#f");
+    assert_execute!("(or)", "#f");
+    assert_execute!("(or #f)", "#f");
+    assert_execute!("(or 1)", "1");
+    assert_execute!("(or 1 2)", "1");
+    assert_execute!("(or 1 #f)", "1");
+    assert_execute!("(or #f 3)", "3");
+    assert_execute!("(or #f #f)", "#f");
+    assert_execute!("(or 1 (error \"bad\"))", "1");
+}
+
+#[test]
 fn test_bad_syntax() {
     assert_execute_fail!("(22+)", "SyntaxError: Unexpected character when looking for a delimiter: + (line: 1, column: 4)");
     assert_execute_fail!("(+ 2 3)\n(+ 1 2-)", "SyntaxError: Unexpected character when looking for a delimiter: - (line: 2, column: 7)");

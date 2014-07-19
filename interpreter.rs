@@ -190,6 +190,27 @@ fn evaluate_expression(nodes: &Vec<Node>, env: Rc<RefCell<Environment>>) -> Resu
                         _ => evaluate_node(nodes.get(2), env.clone())
                     }
                 },
+                "and" => {
+                    let mut res = Boolean(true);
+                    for n in nodes.tailn(1).iter() {
+                        let v = try!(evaluate_node(n, env.clone()));
+                        match v {
+                            Boolean(false) => return Ok(Boolean(false)),
+                            _ => res = v
+                        }
+                    }
+                    Ok(res)
+                },
+                "or" => {
+                    for n in nodes.tailn(1).iter() {
+                        let v = try!(evaluate_node(n, env.clone()));
+                        match v {
+                            Boolean(false) => (),
+                            _ => return Ok(v)
+                        }
+                    }
+                    Ok(Boolean(false))
+                },
                 "+" => {
                     if nodes.len() < 3 {
                         runtime_error!("Must supply at least two arguments to +: {}", nodes);
