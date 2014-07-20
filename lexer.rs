@@ -9,15 +9,15 @@ pub fn tokenize(s: &str) -> Result<Vec<Token>, SyntaxError> {
 
 #[deriving(Show, PartialEq)]
 pub enum Token {
-    OpenParen,
-    CloseParen,
-    Quote,
-    Quasiquote,
-    Unquote,
-    Identifier(String),
-    Integer(int),
-    Boolean(bool),
-    String(String),
+    TOpenParen,
+    TCloseParen,
+    TQuote,
+    TQuasiquote,
+    TUnquote,
+    TIdentifier(String),
+    TInteger(int),
+    TBoolean(bool),
+    TString(String),
 }
 
 pub struct SyntaxError {
@@ -84,23 +84,23 @@ impl<'a> Lexer<'a> {
                             self.advance();
                         },
                         '(' => {
-                            self.tokens.push(OpenParen);
+                            self.tokens.push(TOpenParen);
                             self.advance();
                         },
                         ')' => {
-                            self.tokens.push(CloseParen);
+                            self.tokens.push(TCloseParen);
                             self.advance();
                         },
                         '\'' => {
-                            self.tokens.push(Quote);
+                            self.tokens.push(TQuote);
                             self.advance();
                         },
                         '`' => {
-                            self.tokens.push(Quasiquote);
+                            self.tokens.push(TQuasiquote);
                             self.advance();
                         },
                         ',' => {
-                            self.tokens.push(Unquote);
+                            self.tokens.push(TUnquote);
                             self.advance();
                         },
                         '+' | '-' => {
@@ -109,12 +109,12 @@ impl<'a> Lexer<'a> {
                                     // skip past the +/- symbol and parse the number
                                     self.advance();
                                     let val = try!(self.parse_number());
-                                    self.tokens.push(Integer(if c == '-' { -1 * val } else { val }));
+                                    self.tokens.push(TInteger(if c == '-' { -1 * val } else { val }));
                                     try!(self.parse_delimiter());
                                 },
                                 _ => {
                                     // not followed by a digit, must be an identifier
-                                    self.tokens.push(Identifier(str::from_char(c)));
+                                    self.tokens.push(TIdentifier(str::from_char(c)));
                                     self.advance();
                                     try!(self.parse_delimiter());
                                 }
@@ -122,18 +122,18 @@ impl<'a> Lexer<'a> {
                         },
                         '#' => {
                             let val = try!(self.parse_boolean());
-                            self.tokens.push(Boolean(val));
+                            self.tokens.push(TBoolean(val));
                             try!(self.parse_delimiter());
                         },
                         '0'..'9' => {
                             // don't advance -- let parse_number advance as needed
                             let val = try!(self.parse_number());
-                            self.tokens.push(Integer(val));
+                            self.tokens.push(TInteger(val));
                             try!(self.parse_delimiter());
                         },
                         '\"' => {
                             let val = try!(self.parse_string());
-                            self.tokens.push(String(val));
+                            self.tokens.push(TString(val));
                             try!(self.parse_delimiter());
                         },
                         '[' | ']' | '{' | '}' | ';' | '|' | '\\' => {
@@ -141,7 +141,7 @@ impl<'a> Lexer<'a> {
                         },
                         _ => {
                             let val = try!(self.parse_identifier());
-                            self.tokens.push(Identifier(val));
+                            self.tokens.push(TIdentifier(val));
                             try!(self.parse_delimiter());
                         }
                     }
@@ -245,7 +245,7 @@ impl<'a> Lexer<'a> {
                 match c {
                     _ if c.is_whitespace() => (),
                     ')' => {
-                        self.tokens.push(CloseParen);
+                        self.tokens.push(TCloseParen);
                         self.advance();
                     },
                     _ => syntax_error!("Unexpected character when looking for a delimiter: {}", c),
@@ -260,49 +260,49 @@ impl<'a> Lexer<'a> {
 #[test]
 fn test_simple_lexing() {
     assert_eq!(tokenize("(+ 2 3)").unwrap(),
-               vec![OpenParen, Identifier("+".to_str()), Integer(2), Integer(3), CloseParen]);
+               vec![TOpenParen, TIdentifier("+".to_str()), TInteger(2), TInteger(3), TCloseParen]);
 }
 
 #[test]
 fn test_multi_digit_integers() {
     assert_eq!(tokenize("(+ 21 325)").unwrap(),
-               vec![OpenParen, Identifier("+".to_str()), Integer(21), Integer(325), CloseParen]);
+               vec![TOpenParen, TIdentifier("+".to_str()), TInteger(21), TInteger(325), TCloseParen]);
 }
 
 #[test]
 fn test_subtraction() {
     assert_eq!(tokenize("(- 7 42)").unwrap(),
-               vec![OpenParen, Identifier("-".to_str()), Integer(7), Integer(42), CloseParen]);
+               vec![TOpenParen, TIdentifier("-".to_str()), TInteger(7), TInteger(42), TCloseParen]);
 }
 
 #[test]
 fn test_negative_integers() {
     assert_eq!(tokenize("(+ -8 +2 -33)").unwrap(),
-               vec![OpenParen, Identifier("+".to_str()), Integer(-8), Integer(2), Integer(-33), CloseParen]);
+               vec![TOpenParen, TIdentifier("+".to_str()), TInteger(-8), TInteger(2), TInteger(-33), TCloseParen]);
 }
 
 #[test]
 fn test_booleans() {
     assert_eq!(tokenize("#t").unwrap(),
-               vec![Boolean(true)]);
+               vec![TBoolean(true)]);
     assert_eq!(tokenize("#f").unwrap(),
-               vec![Boolean(false)]);
+               vec![TBoolean(false)]);
 }
 
 #[test]
 fn test_identifiers() {
     for identifier in ["*", "<", "<=", "if", "while", "$t$%*=:t059s"].iter() {
         assert_eq!(tokenize(*identifier).unwrap(),
-                   vec![Identifier(identifier.to_str())]);
+                   vec![TIdentifier(identifier.to_str())]);
     }
 }
 
 #[test]
 fn test_strings() {
     assert_eq!(tokenize("\"hello\"").unwrap(),
-               vec![String("hello".to_str())]);
+               vec![TString("hello".to_str())]);
     assert_eq!(tokenize("\"a _ $ snthoeau(*&G#$()*^!\"").unwrap(),
-               vec![String("a _ $ snthoeau(*&G#$()*^!".to_str())]);
+               vec![TString("a _ $ snthoeau(*&G#$()*^!".to_str())]);
     assert_eq!(tokenize("\"truncated").err().unwrap().to_str().as_slice(),
                "SyntaxError: Expected end quote, but found EOF instead (line: 1, column: 11)");
 }
@@ -310,8 +310,8 @@ fn test_strings() {
 #[test]
 fn test_whitespace() {
     assert_eq!(tokenize("(+ 1 1)\n(+\n    2\t2 \n )\r\n  \n").unwrap(),
-               vec![OpenParen, Identifier("+".to_str()), Integer(1), Integer(1), CloseParen,
-                    OpenParen, Identifier("+".to_str()), Integer(2), Integer(2), CloseParen]);
+               vec![TOpenParen, TIdentifier("+".to_str()), TInteger(1), TInteger(1), TCloseParen,
+                    TOpenParen, TIdentifier("+".to_str()), TInteger(2), TInteger(2), TCloseParen]);
 }
 
 #[test]
@@ -338,33 +338,33 @@ fn test_delimiter_checking() {
 #[test]
 fn test_quoting() {
     assert_eq!(tokenize("'(a)").unwrap(),
-               vec![Quote, OpenParen, Identifier("a".to_str()), CloseParen]);
+               vec![TQuote, TOpenParen, TIdentifier("a".to_str()), TCloseParen]);
     assert_eq!(tokenize("'('a 'b)").unwrap(),
-               vec![Quote, OpenParen, Quote, Identifier("a".to_str()), Quote, Identifier("b".to_str()), CloseParen]);
+               vec![TQuote, TOpenParen, TQuote, TIdentifier("a".to_str()), TQuote, TIdentifier("b".to_str()), TCloseParen]);
     assert_eq!(tokenize("(list 'a b)").unwrap(),
-               vec![OpenParen, Identifier("list".to_str()), Quote, Identifier("a".to_str()), Identifier("b".to_str()), CloseParen]);
+               vec![TOpenParen, TIdentifier("list".to_str()), TQuote, TIdentifier("a".to_str()), TIdentifier("b".to_str()), TCloseParen]);
 }
 
 #[test]
 fn test_quasiquoting() {
     assert_eq!(tokenize("`(,a)").unwrap(),
-               vec![Quasiquote, OpenParen, Unquote, Identifier("a".to_str()), CloseParen]);
+               vec![TQuasiquote, TOpenParen, TUnquote, TIdentifier("a".to_str()), TCloseParen]);
     assert_eq!(tokenize("`(,a b ,c)").unwrap(),
-               vec![Quasiquote, OpenParen, Unquote, Identifier("a".to_str()), Identifier("b".to_str()), Unquote, Identifier("c".to_str()), CloseParen]);
+               vec![TQuasiquote, TOpenParen, TUnquote, TIdentifier("a".to_str()), TIdentifier("b".to_str()), TUnquote, TIdentifier("c".to_str()), TCloseParen]);
 }
 
 #[test]
 fn test_complex_code_block() {
     assert_eq!(tokenize("(define (list-of-squares n)\n  (let loop ((i n) (res (list)))\n    (if (< i 0)\n        res\n        (loop (- i 1) (cons (* i i) res)))))").unwrap(),
-               vec![OpenParen, Identifier("define".to_str()), OpenParen, Identifier("list-of-squares".to_str()), Identifier("n".to_str()), CloseParen, OpenParen, Identifier("let".to_str()), Identifier("loop".to_str()), OpenParen, OpenParen, Identifier("i".to_str()), Identifier("n".to_str()), CloseParen, OpenParen, Identifier("res".to_str()), OpenParen, Identifier("list".to_str()), CloseParen, CloseParen, CloseParen, OpenParen, Identifier("if".to_str()), OpenParen, Identifier("<".to_str()), Identifier("i".to_str()), Integer(0), CloseParen, Identifier("res".to_str()), OpenParen, Identifier("loop".to_str()), OpenParen, Identifier("-".to_str()), Identifier("i".to_str()), Integer(1), CloseParen, OpenParen, Identifier("cons".to_str()), OpenParen, Identifier("*".to_str()), Identifier("i".to_str()), Identifier("i".to_str()), CloseParen, Identifier("res".to_str()), CloseParen, CloseParen, CloseParen, CloseParen, CloseParen]);
+               vec![TOpenParen, TIdentifier("define".to_str()), TOpenParen, TIdentifier("list-of-squares".to_str()), TIdentifier("n".to_str()), TCloseParen, TOpenParen, TIdentifier("let".to_str()), TIdentifier("loop".to_str()), TOpenParen, TOpenParen, TIdentifier("i".to_str()), TIdentifier("n".to_str()), TCloseParen, TOpenParen, TIdentifier("res".to_str()), TOpenParen, TIdentifier("list".to_str()), TCloseParen, TCloseParen, TCloseParen, TOpenParen, TIdentifier("if".to_str()), TOpenParen, TIdentifier("<".to_str()), TIdentifier("i".to_str()), TInteger(0), TCloseParen, TIdentifier("res".to_str()), TOpenParen, TIdentifier("loop".to_str()), TOpenParen, TIdentifier("-".to_str()), TIdentifier("i".to_str()), TInteger(1), TCloseParen, TOpenParen, TIdentifier("cons".to_str()), TOpenParen, TIdentifier("*".to_str()), TIdentifier("i".to_str()), TIdentifier("i".to_str()), TCloseParen, TIdentifier("res".to_str()), TCloseParen, TCloseParen, TCloseParen, TCloseParen, TCloseParen]);
 }
 
 #[test]
 fn test_unicode_identifiers() {
     assert_eq!(tokenize("λ").unwrap(),
-               vec![Identifier("λ".to_str())]);
+               vec![TIdentifier("λ".to_str())]);
     assert_eq!(tokenize("★☎♫✂").unwrap(),
-               vec![Identifier("★☎♫✂".to_str())]);
+               vec![TIdentifier("★☎♫✂".to_str())]);
     assert_eq!(tokenize("日本国").unwrap(),
-               vec![Identifier("日本国".to_str())]);
+               vec![TIdentifier("日本国".to_str())]);
 }

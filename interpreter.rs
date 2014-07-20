@@ -1,5 +1,4 @@
-use parser;
-use parser::Node;
+use parser::*;
 
 use std::fmt;
 use std::collections::HashMap;
@@ -13,16 +12,16 @@ pub fn interpret(nodes: &Vec<Node>) -> Result<Value, RuntimeError> {
 
 #[deriving(PartialEq, Clone)]
 pub enum Value {
-    Symbol(String),
-    Integer(int),
-    Boolean(bool),
-    String(String),
-    List(Vec<Value>),
-    Procedure(Function),
+    VSymbol(String),
+    VInteger(int),
+    VBoolean(bool),
+    VString(String),
+    VList(Vec<Value>),
+    VProcedure(Function),
 }
 
 // null == empty list
-macro_rules! null { () => (List(vec![])) }
+macro_rules! null { () => (VList(vec![])) }
 
 pub enum Function {
     NativeFunction(ValueOperation),
@@ -41,19 +40,19 @@ impl fmt::Show for Value {
 impl Value {
     fn to_str(&self) -> String {
         match self {
-            &Symbol(_) => format!("'{}", self.to_raw_str()),
-            &List(_) => format!("'{}", self.to_raw_str()),
+            &VSymbol(_) => format!("'{}", self.to_raw_str()),
+            &VList(_) => format!("'{}", self.to_raw_str()),
             _ => self.to_raw_str()
         }
     }
 
     fn to_raw_str(&self) -> String {
         match *self {
-            Symbol(ref val) => format!("{}", val),
-            Integer(val) => format!("{}", val),
-            Boolean(val) => format!("#{}", if val { "t" } else { "f" }),
-            String(ref val) => format!("\"{}\"", val),
-            List(ref val) => {
+            VSymbol(ref val) => format!("{}", val),
+            VInteger(val) => format!("{}", val),
+            VBoolean(val) => format!("#{}", if val { "t" } else { "f" }),
+            VString(ref val) => format!("\"{}\"", val),
+            VList(ref val) => {
                 let mut s = String::new();
                 let mut first = true;
                 for n in val.iter() {
@@ -66,7 +65,7 @@ impl Value {
                 }
                 format!("({})", s)
             }
-            Procedure(_) => format!("#<procedure>")
+            VProcedure(_) => format!("#<procedure>")
         }
     }
 }
@@ -112,7 +111,7 @@ impl Environment {
         let mut env = Environment { parent: None, values: HashMap::new() };
         for item in PREDEFINED_FUNCTIONS.iter() {
             let (name, ref func) = *item;
-            env.set(name.to_str(), Procedure(func.clone()));
+            env.set(name.to_str(), VProcedure(func.clone()));
         }
         Rc::new(RefCell::new(env))
     }
@@ -154,16 +153,16 @@ fn evaluate_nodes(nodes: &Vec<Node>, env: Rc<RefCell<Environment>>) -> Result<Va
 
 fn evaluate_node(node: &Node, env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
     match node {
-        &parser::Identifier(ref v) => {
+        &NIdentifier(ref v) => {
             match env.borrow().get(v) {
                 Some(val) => Ok(val),
                 None => runtime_error!("Identifier not found: {}", node)
             }
         },
-        &parser::Integer(v) => Ok(Integer(v)),
-        &parser::Boolean(v) => Ok(Boolean(v)),
-        &parser::String(ref v) => Ok(String(v.clone())),
-        &parser::List(ref vec) => {
+        &NInteger(v) => Ok(VInteger(v)),
+        &NBoolean(v) => Ok(VBoolean(v)),
+        &NString(ref v) => Ok(VString(v.clone())),
+        &NList(ref vec) => {
             if vec.len() > 0 {
                 evaluate_expression(vec, env.clone())
             } else {
@@ -175,13 +174,13 @@ fn evaluate_node(node: &Node, env: Rc<RefCell<Environment>>) -> Result<Value, Ru
 
 fn quote_node(node: &Node, quasi: bool, env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
     match node {
-        &parser::Identifier(ref v) => Ok(Symbol(v.clone())),
-        &parser::Integer(v) => Ok(Integer(v)),
-        &parser::Boolean(v) => Ok(Boolean(v)),
-        &parser::String(ref v) => Ok(String(v.clone())),
-        &parser::List(ref vec) => {
+        &NIdentifier(ref v) => Ok(VSymbol(v.clone())),
+        &NInteger(v) => Ok(VInteger(v)),
+        &NBoolean(v) => Ok(VBoolean(v)),
+        &NString(ref v) => Ok(VString(v.clone())),
+        &NList(ref vec) => {
             // check if we are unquoting inside a quasiquote
-            if quasi && vec.len() > 0 && *vec.get(0) == parser::Identifier("unquote".to_str()) {
+            if quasi && vec.len() > 0 && *vec.get(0) == NIdentifier("unquote".to_str()) {
                 if vec.len() != 2 {
                     runtime_error!("Must supply exactly one argument to unquote: {}", vec);
                 }
@@ -192,7 +191,7 @@ fn quote_node(node: &Node, quasi: bool, env: Rc<RefCell<Environment>>) -> Result
                     let v = try!(quote_node(n, quasi, env.clone()));
                     res.push(v);
                 }
-                Ok(List(res))
+                Ok(VList(res))
             }
         }
     }
@@ -204,7 +203,7 @@ fn evaluate_expression(nodes: &Vec<Node>, env: Rc<RefCell<Environment>>) -> Resu
     }
     let first = try!(evaluate_node(nodes.get(0), env.clone()));
     match first {
-        Procedure(f) => apply_function(&f, nodes.tailn(1), env.clone()),
+        VProcedure(f) => apply_function(&f, nodes.tailn(1), env.clone()),
         _ => runtime_error!("First element in an expression must be a procedure: {}", first)
     }
 }
@@ -252,7 +251,7 @@ fn native_define(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, 
         runtime_error!("Must supply exactly two arguments to define: {}", args);
     }
     let name = match *args.get(0).unwrap() {
-        parser::Identifier(ref x) => x,
+        NIdentifier(ref x) => x,
         _ => runtime_error!("Unexpected node for name in define: {}", args)
     };
     let alreadyDefined = env.borrow().has(name);
@@ -270,7 +269,7 @@ fn native_set(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, Run
         runtime_error!("Must supply exactly two arguments to set!: {}", args);
     }
     let name = match *args.get(0).unwrap() {
-        parser::Identifier(ref x) => x,
+        NIdentifier(ref x) => x,
         _ => runtime_error!("Unexpected node for name in set!: {}", args)
     };
     let alreadyDefined = env.borrow().has(name);
@@ -288,11 +287,11 @@ fn native_lambda(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, 
         runtime_error!("Must supply at least two arguments to lambda: {}", args);
     }
     let argNames = match *args.get(0).unwrap() {
-        parser::List(ref list) => {
+        NList(ref list) => {
             let mut names = vec![];
             for item in list.iter() {
                 match *item {
-                    parser::Identifier(ref s) => names.push(s.clone()),
+                    NIdentifier(ref s) => names.push(s.clone()),
                     _ => runtime_error!("Unexpected argument in lambda arguments: {}", item)
                 };
             }
@@ -301,7 +300,7 @@ fn native_lambda(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, 
         _ => runtime_error!("Unexpected node for arguments in lambda: {}", args)
     };
     let body = Vec::from_slice(args.tailn(1));
-    Ok(Procedure(SchemeFunction(argNames, body, env.clone())))
+    Ok(VProcedure(SchemeFunction(argNames, body, env.clone())))
 }
 
 fn native_if(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
@@ -310,7 +309,7 @@ fn native_if(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, Runt
     }
     let condition = try!(evaluate_node(args.get(0).unwrap(), env.clone()));
     match condition {
-        Boolean(false) => evaluate_node(args.get(2).unwrap(), env.clone()),
+        VBoolean(false) => evaluate_node(args.get(2).unwrap(), env.clone()),
         _ => evaluate_node(args.get(1).unwrap(), env.clone())
     }
 }
@@ -323,11 +322,11 @@ fn native_plus(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, Ru
     for n in args.iter() {
         let v = try!(evaluate_node(n, env.clone()));
         match v {
-            Integer(x) => sum += x,
+            VInteger(x) => sum += x,
             _ => runtime_error!("Unexpected node during +: {}", n)
         };
     };
-    Ok(Integer(sum))
+    Ok(VInteger(sum))
 }
 
 fn native_minus(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
@@ -337,22 +336,22 @@ fn native_minus(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, R
     let l = try!(evaluate_node(args.get(0).unwrap(), env.clone()));
     let r = try!(evaluate_node(args.get(1).unwrap(), env.clone()));
     let mut result = match l {
-        Integer(x) => x,
+        VInteger(x) => x,
         _ => runtime_error!("Unexpected node during -: {}", args)
     };
     result -= match r {
-        Integer(x) => x,
+        VInteger(x) => x,
         _ => runtime_error!("Unexpected node during -: {}", args)
     };
-    Ok(Integer(result))
+    Ok(VInteger(result))
 }
 
 fn native_and(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
-    let mut res = Boolean(true);
+    let mut res = VBoolean(true);
     for n in args.iter() {
         let v = try!(evaluate_node(n, env.clone()));
         match v {
-            Boolean(false) => return Ok(Boolean(false)),
+            VBoolean(false) => return Ok(VBoolean(false)),
             _ => res = v
         }
     }
@@ -363,11 +362,11 @@ fn native_or(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, Runt
     for n in args.iter() {
         let v = try!(evaluate_node(n, env.clone()));
         match v {
-            Boolean(false) => (),
+            VBoolean(false) => (),
             _ => return Ok(v)
         }
     }
-    Ok(Boolean(false))
+    Ok(VBoolean(false))
 }
 
 fn native_list(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
@@ -376,7 +375,7 @@ fn native_list(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, Ru
         let v = try!(evaluate_node(n, env.clone()));
         elements.push(v);
     }
-    Ok(List(elements))
+    Ok(VList(elements))
 }
 
 fn native_quote(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
@@ -403,12 +402,12 @@ fn native_error(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, R
 
 #[test]
 fn test_global_variables() {
-    assert_eq!(interpret(&vec![parser::List(vec![parser::Identifier("define".to_str()), parser::Identifier("x".to_str()), parser::Integer(2)]), parser::List(vec![parser::Identifier("+".to_str()), parser::Identifier("x".to_str()), parser::Identifier("x".to_str()), parser::Identifier("x".to_str())])]).unwrap(),
-               Integer(6));
+    assert_eq!(interpret(&vec![NList(vec![NIdentifier("define".to_str()), NIdentifier("x".to_str()), NInteger(2)]), NList(vec![NIdentifier("+".to_str()), NIdentifier("x".to_str()), NIdentifier("x".to_str()), NIdentifier("x".to_str())])]).unwrap(),
+               VInteger(6));
 }
 
 #[test]
 fn test_global_function_definition() {
-    assert_eq!(interpret(&vec![parser::List(vec![parser::Identifier("define".to_str()), parser::Identifier("double".to_str()), parser::List(vec![parser::Identifier("lambda".to_str()), parser::List(vec![parser::Identifier("x".to_str())]), parser::List(vec![parser::Identifier("+".to_str()), parser::Identifier("x".to_str()), parser::Identifier("x".to_str())])])]), parser::List(vec![parser::Identifier("double".to_str()), parser::Integer(8)])]).unwrap(),
-               Integer(16));
+    assert_eq!(interpret(&vec![NList(vec![NIdentifier("define".to_str()), NIdentifier("double".to_str()), NList(vec![NIdentifier("lambda".to_str()), NList(vec![NIdentifier("x".to_str())]), NList(vec![NIdentifier("+".to_str()), NIdentifier("x".to_str()), NIdentifier("x".to_str())])])]), NList(vec![NIdentifier("double".to_str()), NInteger(8)])]).unwrap(),
+               VInteger(16));
 }

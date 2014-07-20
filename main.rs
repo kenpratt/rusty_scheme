@@ -1,4 +1,5 @@
 #![feature(macro_rules)]
+#![feature(globs)]
 
 mod lexer;
 mod parser;
