@@ -146,19 +146,27 @@ fn evaluate_node(node: &Node, env: Rc<RefCell<Environment>>) -> Result<Value, Ru
     }
 }
 
-fn quote_node(node: &Node, env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+fn quote_node(node: &Node, quasi: bool, env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
     match node {
         &parser::Identifier(ref v) => Ok(Symbol(v.clone())),
         &parser::Integer(v) => Ok(Integer(v)),
         &parser::Boolean(v) => Ok(Boolean(v)),
         &parser::String(ref v) => Ok(String(v.clone())),
         &parser::List(ref vec) => {
-            let mut res = vec![];
-            for n in vec.iter() {
-                let v = try!(quote_node(n, env.clone()));
-                res.push(v);
+            // check if we are unquoting inside a quasiquote
+            if quasi && vec.len() > 0 && *vec.get(0) == parser::Identifier("unquote".to_str()) {
+                if vec.len() != 2 {
+                    runtime_error!("Must supply exactly one argument to unquote: {}", vec);
+                }
+                evaluate_node(vec.get(1), env.clone())
+            } else {
+                let mut res = vec![];
+                for n in vec.iter() {
+                    let v = try!(quote_node(n, quasi, env.clone()));
+                    res.push(v);
+                }
+                Ok(List(res))
             }
-            Ok(List(res))
         }
     }
 }
@@ -290,7 +298,13 @@ fn evaluate_expression(nodes: &Vec<Node>, env: Rc<RefCell<Environment>>) -> Resu
                     if nodes.len() != 2 {
                         runtime_error!("Must supply exactly one argument to quote: {}", nodes);
                     }
-                    quote_node(nodes.get(1), env.clone())
+                    quote_node(nodes.get(1), false, env.clone())
+                }
+                "quasiquote" => {
+                    if nodes.len() != 2 {
+                        runtime_error!("Must supply exactly one argument to quasiquote: {}", nodes);
+                    }
+                    quote_node(nodes.get(1), true, env.clone())
                 }
                 "error" => {
                     if nodes.len() != 2 {

@@ -136,6 +136,12 @@ fn test_quoting() {
 }
 
 #[test]
+fn test_quasiquoting() {
+    assert_execute!("(quasiquote (1 2))", "'(1 2)");
+    assert_execute!("(quasiquote (2 (unquote (+ 1 2)) 4))", "'(2 3 4)");
+}
+
+#[test]
 fn test_bad_syntax() {
     assert_execute_fail!("(22+)", "SyntaxError: Unexpected character when looking for a delimiter: + (line: 1, column: 4)");
     assert_execute_fail!("(+ 2 3)\n(+ 1 2-)", "SyntaxError: Unexpected character when looking for a delimiter: - (line: 2, column: 7)");
