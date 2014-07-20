@@ -80,6 +80,9 @@ impl<'a> Lexer<'a> {
             match self.current() {
                 Some(c) => {
                     match c {
+                        _ if c.is_whitespace() => {
+                            self.advance();
+                        },
                         '(' => {
                             self.tokens.push(OpenParen);
                             self.advance();
@@ -122,11 +125,6 @@ impl<'a> Lexer<'a> {
                             self.tokens.push(Boolean(val));
                             try!(self.parse_delimiter());
                         },
-                        'A'..'Z' | 'a'..'z' | '!' | '$' | '%' | '&' | '*' | '/' | ':' | '<' | '=' | '>' | '?' | '_' | '^' => {
-                            let val = try!(self.parse_identifier());
-                            self.tokens.push(Identifier(val));
-                            try!(self.parse_delimiter());
-                        },
                         '0'..'9' => {
                             // don't advance -- let parse_number advance as needed
                             let val = try!(self.parse_number());
@@ -138,8 +136,14 @@ impl<'a> Lexer<'a> {
                             self.tokens.push(String(val));
                             try!(self.parse_delimiter());
                         },
-                        ' ' | '\x09' | '\x0a' | '\x0d' => self.advance(),
-                        _  => syntax_error!("Unexpected character: {}", c),
+                        '[' | ']' | '{' | '}' | ';' | '|' | '\\' => {
+                            syntax_error!("Unexpected character: {}", c);
+                        },
+                        _ => {
+                            let val = try!(self.parse_identifier());
+                            self.tokens.push(Identifier(val));
+                            try!(self.parse_delimiter());
+                        }
                     }
                 },
                 None => break
@@ -192,11 +196,16 @@ impl<'a> Lexer<'a> {
             match self.current() {
                 Some(c) => {
                     match c {
-                        'A'..'Z' | 'a'..'z' | '0'..'9' | '!' | '$' | '%' | '&' | '*' | '/' | ':' | '<' | '=' | '>' | '?' | '_' | '^' | '+' | '-' | '#' => {
+                        _ if c.is_whitespace() => {
+                            break;
+                        },
+                        '(' | ')' | '[' | ']' | '{' | '}' | '\"' | ',' | '\'' | '`' | ';' | '|' | '\\' => {
+                            break;
+                        },
+                        _ => {
                             s.push_char(c);
                             self.advance();
                         },
-                        _ => break
                     }
                 },
                 None => break
@@ -234,11 +243,11 @@ impl<'a> Lexer<'a> {
         match self.current() {
             Some(c) => {
                 match c {
+                    _ if c.is_whitespace() => (),
                     ')' => {
                         self.tokens.push(CloseParen);
                         self.advance();
                     },
-                    ' ' | '\x09'| '\x0a' | '\x0d' => (),
                     _ => syntax_error!("Unexpected character when looking for a delimiter: {}", c),
                 }
             },
@@ -307,8 +316,8 @@ fn test_whitespace() {
 
 #[test]
 fn test_bad_syntax() {
-    assert_eq!(tokenize("(\\)").err().unwrap().to_str().as_slice(),
-               "SyntaxError: Unexpected character: \\ (line: 1, column: 2)");
+    assert_eq!(tokenize("([)").err().unwrap().to_str().as_slice(),
+               "SyntaxError: Unexpected character: [ (line: 1, column: 2)");
 }
 
 #[test]
@@ -348,4 +357,14 @@ fn test_quasiquoting() {
 fn test_complex_code_block() {
     assert_eq!(tokenize("(define (list-of-squares n)\n  (let loop ((i n) (res (list)))\n    (if (< i 0)\n        res\n        (loop (- i 1) (cons (* i i) res)))))").unwrap(),
                vec![OpenParen, Identifier("define".to_str()), OpenParen, Identifier("list-of-squares".to_str()), Identifier("n".to_str()), CloseParen, OpenParen, Identifier("let".to_str()), Identifier("loop".to_str()), OpenParen, OpenParen, Identifier("i".to_str()), Identifier("n".to_str()), CloseParen, OpenParen, Identifier("res".to_str()), OpenParen, Identifier("list".to_str()), CloseParen, CloseParen, CloseParen, OpenParen, Identifier("if".to_str()), OpenParen, Identifier("<".to_str()), Identifier("i".to_str()), Integer(0), CloseParen, Identifier("res".to_str()), OpenParen, Identifier("loop".to_str()), OpenParen, Identifier("-".to_str()), Identifier("i".to_str()), Integer(1), CloseParen, OpenParen, Identifier("cons".to_str()), OpenParen, Identifier("*".to_str()), Identifier("i".to_str()), Identifier("i".to_str()), CloseParen, Identifier("res".to_str()), CloseParen, CloseParen, CloseParen, CloseParen, CloseParen]);
+}
+
+#[test]
+fn test_unicode_identifiers() {
+    assert_eq!(tokenize("λ").unwrap(),
+               vec![Identifier("λ".to_str())]);
+    assert_eq!(tokenize("★☎♫✂").unwrap(),
+               vec![Identifier("★☎♫✂".to_str())]);
+    assert_eq!(tokenize("日本国").unwrap(),
+               vec![Identifier("日本国".to_str())]);
 }

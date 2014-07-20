@@ -163,3 +163,8 @@ fn test_generated_runtime_error() {
     assert_execute_fail!("(error \"fail, please\")", "RuntimeError: \"fail, please\"");
     assert_execute_fail!("(error (+ 2 3))", "RuntimeError: 5");
 }
+
+#[test]
+fn test_unicode_identifiers() {
+    assert_execute!("(define ★ 3) (define ♫ 4) (+ ★ ♫)", "7")
+}
