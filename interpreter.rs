@@ -26,7 +26,7 @@ macro_rules! null { () => (List(vec![])) }
 
 pub enum Function {
     NativeFunction(ValueOperation),
-    SchemeFunction(Vec<String>, Vec<Node>),
+    SchemeFunction(Vec<String>, Vec<Node>, Rc<RefCell<Environment>>),
 }
 
 // type signature for all native functions
@@ -81,7 +81,7 @@ impl Clone for Function {
     fn clone(&self) -> Function {
         match *self {
             NativeFunction(ref func) => NativeFunction(*func),
-            SchemeFunction(ref a, ref b) => SchemeFunction(a.clone(), b.clone())
+            SchemeFunction(ref a, ref b, ref env) => SchemeFunction(a.clone(), b.clone(), env.clone())
         }
     }
 }
@@ -214,13 +214,13 @@ fn apply_function(func: &Function, args: &[Node], env: Rc<RefCell<Environment>>)
         &NativeFunction(nativeFn) => {
             nativeFn(args, env)
         },
-        &SchemeFunction(ref argNames, ref body) => {
+        &SchemeFunction(ref argNames, ref body, ref funcEnv) => {
             if argNames.len() != args.len() {
                 runtime_error!("Must supply exactly {} arguments to function: {}", argNames.len(), args);
             }
 
             // create a new, child environment for the procedure and define the arguments as local variables
-            let procEnv = Environment::new_child(env.clone());
+            let procEnv = Environment::new_child(funcEnv.clone());
             for (name, arg) in argNames.iter().zip(args.iter()) {
                 let val = try!(evaluate_node(arg, env.clone()));
                 procEnv.borrow_mut().set(name.clone(), val);
@@ -301,7 +301,7 @@ fn native_lambda(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, 
         _ => runtime_error!("Unexpected node for arguments in lambda: {}", args)
     };
     let body = Vec::from_slice(args.tailn(1));
-    Ok(Procedure(SchemeFunction(argNames, body)))
+    Ok(Procedure(SchemeFunction(argNames, body, env.clone())))
 }
 
 fn native_if(args: &[Node], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
