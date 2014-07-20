@@ -294,18 +294,26 @@ fn evaluate_expression(nodes: &Vec<Node>, env: Rc<RefCell<Environment>>) -> Resu
                     };
                     Ok(Integer(result))
                 },
+                "list" => {
+                    let mut elements = vec![];
+                    for n in nodes.tailn(1).iter() {
+                        let v = try!(evaluate_node(n, env.clone()));
+                        elements.push(v);
+                    }
+                    Ok(List(elements))
+                },
                 "quote" => {
                     if nodes.len() != 2 {
                         runtime_error!("Must supply exactly one argument to quote: {}", nodes);
                     }
                     quote_node(nodes.get(1), false, env.clone())
-                }
+                },
                 "quasiquote" => {
                     if nodes.len() != 2 {
                         runtime_error!("Must supply exactly one argument to quasiquote: {}", nodes);
                     }
                     quote_node(nodes.get(1), true, env.clone())
-                }
+                },
                 "error" => {
                     if nodes.len() != 2 {
                         runtime_error!("Must supply exactly one arguments to error: {}", nodes);

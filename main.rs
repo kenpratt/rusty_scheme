@@ -64,6 +64,13 @@ fn test_nested_expressions() {
 }
 
 #[test]
+fn test_list_creation() {
+    assert_execute!("(list)", "'()");
+    assert_execute!("(list 1 2 3)", "'(1 2 3)");
+    assert_execute!("(list 1 (list 2 3) (list 4) (list))", "'(1 (2 3) (4) ())");
+}
+
+#[test]
 fn test_variable_definition() {
     assert_execute!("(define x 2) (+ x x x)", "6");
 }
