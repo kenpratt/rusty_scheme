@@ -202,19 +202,10 @@ fn evaluate_expression(nodes: &Vec<Node>, env: Rc<RefCell<Environment>>) -> Resu
     if nodes.len() == 0 {
         runtime_error!("Can't evaluate an empty expression: {}", nodes);
     }
-    let first = nodes.get(0);
-    match *first {
-        parser::Identifier(ref func) => {
-            let maybeFunc = env.borrow().get(func);
-            match maybeFunc {
-                Some(Procedure(f)) => apply_function(&f, nodes.tailn(1), env.clone()),
-                Some(other) => runtime_error!("Can't execute a non-procedure: {}", other),
-                None => runtime_error!("Unknown function: {}", func)
-            }
-        },
-        _ => {
-            runtime_error!("First element in an expression must be an identifier: {}", first);
-        }
+    let first = try!(evaluate_node(nodes.get(0), env.clone()));
+    match first {
+        Procedure(f) => apply_function(&f, nodes.tailn(1), env.clone()),
+        _ => runtime_error!("First element in an expression must be a procedure: {}", first)
     }
 }
 
