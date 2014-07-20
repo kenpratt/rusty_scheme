@@ -213,7 +213,7 @@ fn evaluate_expression(nodes: &Vec<Node>, env: Rc<RefCell<Environment>>) -> Resu
                         runtime_error!("Can't set! an undefined variable: {}", name)
                     }
                 },
-                "lambda" => {
+                "lambda" | "λ" => {
                     if nodes.len() < 3 {
                         runtime_error!("Must supply at least two arguments to lambda: {}", nodes);
                     }

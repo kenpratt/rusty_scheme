@@ -96,6 +96,7 @@ fn test_unknown_variable_modification() {
 fn test_procedure_definition() {
     assert_execute!("(define double (lambda (x) (+ x x))) (double 8)", "16");
     assert_execute!("(define twice (lambda (f v) (f (f v)))) (twice (lambda (x) (+ x x)) 8)", "32");
+    assert_execute!("(define twice (λ (f v) (f (f v)))) (twice (λ (x) (+ x x)) 8)", "32");
 }
 
 #[test]
@@ -166,5 +167,5 @@ fn test_generated_runtime_error() {
 
 #[test]
 fn test_unicode_identifiers() {
-    assert_execute!("(define ★ 3) (define ♫ 4) (+ ★ ♫)", "7")
+    assert_execute!("(define ★ 3) (define ♫ 4) (+ ★ ♫)", "7");
 }
