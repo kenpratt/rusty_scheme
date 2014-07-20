@@ -139,6 +139,7 @@ fn test_quoting() {
 fn test_quasiquoting() {
     assert_execute!("(quasiquote (1 2))", "'(1 2)");
     assert_execute!("(quasiquote (2 (unquote (+ 1 2)) 4))", "'(2 3 4)");
+    assert_execute!("`(2 ,(+ 1 2) 4)", "'(2 3 4)");
 }
 
 #[test]

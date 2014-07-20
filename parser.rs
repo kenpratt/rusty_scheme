@@ -81,6 +81,24 @@ impl<'a> Parser<'a> {
                             None => parse_error!("Missing quoted value, depth: {}", depth)
                         }
                     },
+                    lexer::Quasiquote => {
+                        match try!(self.parse_node(depth)) {
+                            Some(inner) => {
+                                let quoted = List(vec![Identifier("quasiquote".to_str()), inner]);
+                                Ok(Some(quoted))
+                            },
+                            None => parse_error!("Missing quasiquoted value, depth: {}", depth)
+                        }
+                    }
+                    lexer::Unquote => {
+                        match try!(self.parse_node(depth)) {
+                            Some(inner) => {
+                                let quoted = List(vec![Identifier("unquote".to_str()), inner]);
+                                Ok(Some(quoted))
+                            },
+                            None => parse_error!("Missing unquoted value, depth: {}", depth)
+                        }
+                    }
                     lexer::Identifier(ref val) => {
                         Ok(Some(Identifier(val.clone())))
                     },
@@ -119,11 +137,19 @@ fn test_nested() {
 }
 
 #[test]
-fn test_quote() {
+fn test_quoting() {
     assert_eq!(parse(&vec![lexer::Quote, lexer::OpenParen, lexer::Identifier("a".to_str()), lexer::CloseParen]).unwrap(),
                vec![List(vec![Identifier("quote".to_str()), List(vec![Identifier("a".to_str())])])]);
     assert_eq!(parse(&vec![lexer::OpenParen, lexer::Identifier("list".to_str()), lexer::Quote, lexer::Identifier("a".to_str()), lexer::Identifier("b".to_str()), lexer::CloseParen]).unwrap(),
                vec![List(vec![Identifier("list".to_str()), List(vec![Identifier("quote".to_str()), Identifier("a".to_str())]), Identifier("b".to_str())])]);
+}
+
+#[test]
+fn test_quasiquoting() {
+    assert_eq!(parse(&vec![lexer::Quasiquote, lexer::OpenParen, lexer::Unquote, lexer::Identifier("a".to_str()), lexer::CloseParen]).unwrap(),
+               vec![List(vec![Identifier("quasiquote".to_str()), List(vec![List(vec![Identifier("unquote".to_str()), Identifier("a".to_str())])])])]);
+    assert_eq!(parse(&vec![lexer::Quasiquote, lexer::OpenParen, lexer::Unquote, lexer::Identifier("a".to_str()), lexer::Identifier("b".to_str()), lexer::Unquote, lexer::Identifier("c".to_str()), lexer::CloseParen]).unwrap(),
+               vec![List(vec![Identifier("quasiquote".to_str()), List(vec![List(vec![Identifier("unquote".to_str()), Identifier("a".to_str())]), Identifier("b".to_str()), List(vec![Identifier("unquote".to_str()), Identifier("c".to_str())])])])]);
 }
 
 #[test]
