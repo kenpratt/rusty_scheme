@@ -158,6 +158,12 @@ fn test_quasiquoting() {
 }
 
 #[test]
+fn test_apply() {
+    assert_execute!("(apply + '(1 2 3))", "6");
+    assert_execute!("(define foo (lambda (f) (lambda (x y) (f (f x y) y)))) (apply (apply foo '(+)) '(5 3))", "11");
+}
+
+#[test]
 fn test_bad_syntax() {
     assert_execute_fail!("(22+)", "SyntaxError: Unexpected character when looking for a delimiter: + (line: 1, column: 4)");
     assert_execute_fail!("(+ 2 3)\n(+ 1 2-)", "SyntaxError: Unexpected character when looking for a delimiter: - (line: 2, column: 7)");

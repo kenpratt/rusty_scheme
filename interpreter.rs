@@ -265,6 +265,7 @@ static PREDEFINED_FUNCTIONS: &'static[(&'static str, Function)] = &[
     ("quote", NativeFunction(native_quote)),
     ("quasiquote", NativeFunction(native_quasiquote)),
     ("error", NativeFunction(native_error)),
+    ("apply", NativeFunction(native_apply)),
 ];
 
 fn native_define(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
@@ -419,6 +420,21 @@ fn native_error(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, 
     }
     let e = try!(evaluate_value(args.get(0).unwrap(), env.clone()));
     runtime_error!("{}", e);
+}
+
+fn native_apply(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        runtime_error!("Must supply exactly two arguments to apply: {}", args);
+    }
+    let func = match try!(evaluate_value(args.get(0).unwrap(), env.clone())) {
+        VProcedure(func) => func,
+        _ => runtime_error!("First argument to apply must be a procedure: {}", args)
+    };
+    let funcArgs = match try!(evaluate_value(args.get(1).unwrap(), env.clone())) {
+        VList(funcArgs) => funcArgs,
+        _ => runtime_error!("Second argument to apply must be a list of arguments: {}", args)
+    };
+    apply_function(&func, funcArgs.as_slice(), env.clone())
 }
 
 #[test]
