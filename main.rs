@@ -164,6 +164,12 @@ fn test_apply() {
 }
 
 #[test]
+fn test_eval() {
+    assert_execute!("(eval '(+ 1 2 3))", "6");
+    assert_execute!("(define eval-formula (lambda (formula) (eval `((lambda (x y) ,formula) 2 3)))) (eval-formula '(+ (- y x) y))", "4");
+}
+
+#[test]
 fn test_bad_syntax() {
     assert_execute_fail!("(22+)", "SyntaxError: Unexpected character when looking for a delimiter: + (line: 1, column: 4)");
     assert_execute_fail!("(+ 2 3)\n(+ 1 2-)", "SyntaxError: Unexpected character when looking for a delimiter: - (line: 2, column: 7)");
