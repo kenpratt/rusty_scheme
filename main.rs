@@ -28,7 +28,7 @@ fn run(input: &str) {
 fn execute(input: &str) -> Result<String, String> {
     let tokens = try_or_err_to_str!(lexer::tokenize(input));
     let ast = try_or_err_to_str!(parser::parse(&tokens));
-    let result = try_or_err_to_str!(interpreter::interpret(&ast));
+    let result = try_or_err_to_str!(interpreter::interpret(ast.as_slice()));
     Ok(format!("{}", result))
 }
 
