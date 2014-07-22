@@ -167,6 +167,7 @@ fn test_apply() {
 fn test_eval() {
     assert_execute!("(eval '(+ 1 2 3))", "6");
     assert_execute!("(define eval-formula (lambda (formula) (eval `((lambda (x y) ,formula) 2 3)))) (eval-formula '(+ (- y x) y))", "4");
+    assert_execute_fail!("(define bad-eval-formula (lambda (formula) ((lambda (x y) (eval formula)) 2 3))) (bad-eval-formula '(+ x y))", "RuntimeError: Identifier not found: 'x");
 }
 
 #[test]

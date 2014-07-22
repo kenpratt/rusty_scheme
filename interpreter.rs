@@ -160,6 +160,13 @@ impl Environment {
             }
         }
     }
+
+    fn get_root(env: Rc<RefCell<Environment>>) -> Rc<RefCell<Environment>> {
+        match env.borrow().parent {
+            Some(ref parent) => Environment::get_root(parent.clone()),
+            None => env.clone()
+        }
+    }
 }
 
 fn evaluate_values(values: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
@@ -443,9 +450,9 @@ fn native_eval(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, R
         runtime_error!("Must supply exactly one argument to eval: {}", args);
     }
 
-    // eval is basically just a double-evaluation -- the first evaluate returns the data, and the second evaluate evaluates the data as code
+    // eval is basically just a double-evaluation -- the first evaluate returns the data using the local envirnoment, and the second evaluate evaluates the data as code using the global environment
     let res = try!(evaluate_value(args.get(0).unwrap(), env.clone()));
-    evaluate_value(&res, env.clone())
+    evaluate_value(&res, Environment::get_root(env))
 }
 
 #[test]
