@@ -1,2 +1,0 @@
-#!/bin/bash
-kicker -e "rustc --color always $@ main.rs && ./main" -c -l 0.1 main.rs
