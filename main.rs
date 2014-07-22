@@ -1,6 +1,8 @@
 #![feature(macro_rules)]
 #![feature(globs)]
 
+use std::io;
+
 mod lexer;
 mod parser;
 mod interpreter;
@@ -16,13 +18,28 @@ macro_rules! try_or_err_to_str(
 
 #[cfg(not(test))]
 fn main() {
-    run("(+ 2 3)");
+    repl();
 }
 
 #[cfg(not(test))]
-fn run(input: &str) {
-    println!("input: \"{}\"", input);
-    println!("result: \"{}\"", execute(input));
+fn repl() {
+    println!("Welcome to the RustyScheme REPL!");
+    let mut reader = io::stdin();
+    loop {
+        print!("> ");
+        match reader.read_line() {
+            Ok(input) => {
+                let result = execute(input.as_slice());
+                println!("{}", result.unwrap_or_else(|e| e));
+            },
+            Err(err) => {
+                if err.kind != io::EndOfFile {
+                    println!("Error: {}", err.kind);
+                }
+                return;
+            }
+        }
+    }
 }
 
 fn execute(input: &str) -> Result<String, String> {
