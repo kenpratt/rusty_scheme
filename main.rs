@@ -19,25 +19,26 @@ macro_rules! try_or_err_to_str(
 
 #[cfg(not(test))]
 fn main() {
+    let ctx = interpreter::new();
     println!("\nWelcome to the RustyScheme REPL!");
-    repl::start("> ", (|s| execute(s.as_slice())));
+    repl::start("> ", (|s| execute(s.as_slice(), ctx.clone())));
 }
 
-fn execute(input: &str) -> Result<String, String> {
+fn execute(input: &str, ctx: interpreter::Interpreter) -> Result<String, String> {
     let tokens = try_or_err_to_str!(lexer::tokenize(input));
     let ast = try_or_err_to_str!(parser::parse(&tokens));
-    let result = try_or_err_to_str!(interpreter::interpret(ast.as_slice()));
+    let result = try_or_err_to_str!(ctx.run(ast.as_slice()));
     Ok(format!("{}", result))
 }
 
 macro_rules! assert_execute(
     ($src:expr, $res:expr) => (
-        assert_eq!(execute($src).unwrap().as_slice(), $res)
+        assert_eq!(execute($src, interpreter::new()).unwrap().as_slice(), $res)
     )
 )
 macro_rules! assert_execute_fail(
     ($src:expr, $res:expr) => (
-        assert_eq!(execute($src).err().unwrap().as_slice(), $res)
+        assert_eq!(execute($src, interpreter::new()).err().unwrap().as_slice(), $res)
     )
 )
 

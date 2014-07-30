@@ -5,10 +5,24 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 
-pub fn interpret(nodes: &[Node]) -> Result<Value, RuntimeError> {
-    let env = Environment::new_root();
-    let values = Value::from_nodes(nodes);
-    evaluate_values(values.as_slice(), env)
+pub fn new() -> Interpreter {
+    Interpreter::new()
+}
+
+#[deriving(Clone)]
+pub struct Interpreter {
+    root: Rc<RefCell<Environment>>
+}
+
+impl Interpreter {
+    pub fn new() -> Interpreter {
+        Interpreter { root: Environment::new_root() }
+    }
+
+    pub fn run(&self, nodes: &[Node]) -> Result<Value, RuntimeError> {
+        let values = Value::from_nodes(nodes);
+        evaluate_values(values.as_slice(), self.root.clone())
+    }
 }
 
 #[deriving(PartialEq, Clone)]
@@ -457,12 +471,12 @@ fn native_eval(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, R
 
 #[test]
 fn test_global_variables() {
-    assert_eq!(interpret([NList(vec![NIdentifier("define".to_str()), NIdentifier("x".to_str()), NInteger(2)]), NList(vec![NIdentifier("+".to_str()), NIdentifier("x".to_str()), NIdentifier("x".to_str()), NIdentifier("x".to_str())])]).unwrap(),
+    assert_eq!(new().run([NList(vec![NIdentifier("define".to_str()), NIdentifier("x".to_str()), NInteger(2)]), NList(vec![NIdentifier("+".to_str()), NIdentifier("x".to_str()), NIdentifier("x".to_str()), NIdentifier("x".to_str())])]).unwrap(),
                VInteger(6));
 }
 
 #[test]
 fn test_global_function_definition() {
-    assert_eq!(interpret([NList(vec![NIdentifier("define".to_str()), NIdentifier("double".to_str()), NList(vec![NIdentifier("lambda".to_str()), NList(vec![NIdentifier("x".to_str())]), NList(vec![NIdentifier("+".to_str()), NIdentifier("x".to_str()), NIdentifier("x".to_str())])])]), NList(vec![NIdentifier("double".to_str()), NInteger(8)])]).unwrap(),
+    assert_eq!(new().run([NList(vec![NIdentifier("define".to_str()), NIdentifier("double".to_str()), NList(vec![NIdentifier("lambda".to_str()), NList(vec![NIdentifier("x".to_str())]), NList(vec![NIdentifier("+".to_str()), NIdentifier("x".to_str()), NIdentifier("x".to_str())])])]), NList(vec![NIdentifier("double".to_str()), NInteger(8)])]).unwrap(),
                VInteger(16));
 }
