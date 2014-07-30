@@ -4,12 +4,19 @@ use std::c_str::CString;
 #[link(name = "readline")]
 extern {
     fn readline(prompt: *const libc::c_char) -> *const libc::c_char;
+    fn add_history(entry: *const libc::c_char);
 }
 
 fn prompt_for_input(prompt: &str) -> Option<String> {
     let prompt_c_str = prompt.to_c_str();
     unsafe {
+        // wait for enter/CTRL-C/CTRL-D
         let raw = readline(prompt_c_str.as_ptr());
+
+        // add to shell history
+        add_history(raw);
+
+        // parse into String and return
         let cs = CString::new(raw, true);
         if cs.is_null() {
             None
