@@ -1,11 +1,12 @@
 #![feature(macro_rules)]
 #![feature(globs)]
 
-use std::io;
-
 mod lexer;
 mod parser;
 mod interpreter;
+
+#[cfg(not(test))]
+mod repl;
 
 macro_rules! try_or_err_to_str(
     ($inp:expr) => (
@@ -18,28 +19,8 @@ macro_rules! try_or_err_to_str(
 
 #[cfg(not(test))]
 fn main() {
-    repl();
-}
-
-#[cfg(not(test))]
-fn repl() {
     println!("\nWelcome to the RustyScheme REPL!");
-    let mut reader = io::stdin();
-    loop {
-        print!("> ");
-        match reader.read_line() {
-            Ok(input) => {
-                let result = execute(input.as_slice());
-                println!("{}", result.unwrap_or_else(|e| e));
-            },
-            Err(err) => {
-                if err.kind != io::EndOfFile {
-                    println!("Error: {}", err.kind);
-                }
-                return;
-            }
-        }
-    }
+    repl::start("> ", (|s| execute(s.as_slice())));
 }
 
 fn execute(input: &str) -> Result<String, String> {
