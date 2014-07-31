@@ -124,6 +124,7 @@ fn test_procedure_definition() {
     assert_execute!("((λ (x) (+ x x)) 8)", "16");
     assert_execute!("(define foo (λ (x) (λ (y) (+ x y)))) (define add2 (foo 2)) (add2 5)", "7");
     assert_execute!("(define foo (λ (x) (λ (y) (+ x y)))) (define add2 (foo 2)) ((λ (x) (add2 (+ x 1))) 1)", "4");
+    assert_execute!("(define (twice f v) (f (f v))) (twice (lambda (x) (+ x x)) 8)", "32");
 }
 
 #[test]

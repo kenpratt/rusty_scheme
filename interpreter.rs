@@ -282,16 +282,38 @@ static PREDEFINED_FUNCTIONS: &'static[(&'static str, Function)] = &[
 ];
 
 fn native_define(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
-    if args.len() != 2 {
-        runtime_error!("Must supply exactly two arguments to define: {}", args);
+    if args.len() < 2 {
+        runtime_error!("Must supply at least two arguments to define: {}", args);
     }
-    let name = match *args.get(0).unwrap() {
-        VSymbol(ref x) => x,
+    let (name, val) = match *args.get(0).unwrap() {
+        VSymbol(ref name) => {
+            let val = try!(evaluate_value(args.get(1).unwrap(), env.clone()));
+            (name, val)
+        },
+        VList(ref list) => {
+            // if a list is the second argument, it's shortcut for defining a procedure
+            // (define (<name> <args>) <body>) == (define <name> (lambda (<args>) <body>)
+            if list.len() < 1 {
+                runtime_error!("Must supply at least one argument in list part of define: {}", list);
+            }
+            match *list.get(0) {
+                VSymbol(ref name) => {
+                    let argNames = try!(result::collect(list.tailn(1).iter().map(|i| match *i {
+                        VSymbol(ref s) => Ok(s.clone()),
+                        _ => runtime_error!("Unexpected argument in define arguments: {}", i)
+                    })));
+                    let body = Vec::from_slice(args.tailn(1));
+                    let val = VProcedure(SchemeFunction(argNames, body, env.clone()));
+                    (name, val)
+                },
+                _ => runtime_error!("Must supply a symbol in list part of define: {}", list)
+            }
+        },
         _ => runtime_error!("Unexpected value for name in define: {}", args)
     };
+
     let alreadyDefined = env.borrow().has(name);
     if !alreadyDefined {
-        let val = try!(evaluate_value(args.get(1).unwrap(), env.clone()));
         env.borrow_mut().set(name.clone(), val);
         Ok(null!())
     } else {
