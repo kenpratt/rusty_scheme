@@ -1,6 +1,10 @@
 #![feature(macro_rules)]
 #![feature(globs)]
 
+use std::os;
+use std::io::File;
+use std::path::posix::Path;
+
 mod lexer;
 mod parser;
 mod interpreter;
@@ -19,6 +23,26 @@ macro_rules! try_or_err_to_str(
 
 #[cfg(not(test))]
 fn main() {
+    let raw_args = os::args();
+    let args = raw_args.tailn(1);
+    match args.len() {
+        0 => start_repl(),
+        1 => run_file(args.get(0).unwrap()),
+        _ => fail!("You must provide 0 or 1 arguments to RustyScheme: {}", args)
+    }
+}
+
+#[cfg(not(test))]
+fn run_file(filename: &String) {
+    let path = Path::new(filename.as_slice());
+    let mut file = File::open(&path).unwrap();
+    let contents = file.read_to_str().unwrap();
+    let ctx = interpreter::new();
+    execute(contents.as_slice(), ctx);
+}
+
+#[cfg(not(test))]
+fn start_repl() {
     let ctx = interpreter::new();
     println!("\nWelcome to the RustyScheme REPL!");
     repl::start("> ", (|s| execute(s.as_slice(), ctx.clone())));
