@@ -74,7 +74,7 @@ impl<'a> Parser<'a> {
                     TQuote => {
                         match try!(self.parse_node(depth)) {
                             Some(inner) => {
-                                let quoted = NList(vec![NIdentifier("quote".to_str()), inner]);
+                                let quoted = NList(vec![NIdentifier("quote".to_string()), inner]);
                                 Ok(Some(quoted))
                             },
                             None => parse_error!("Missing quoted value, depth: {}", depth)
@@ -83,7 +83,7 @@ impl<'a> Parser<'a> {
                     TQuasiquote => {
                         match try!(self.parse_node(depth)) {
                             Some(inner) => {
-                                let quoted = NList(vec![NIdentifier("quasiquote".to_str()), inner]);
+                                let quoted = NList(vec![NIdentifier("quasiquote".to_string()), inner]);
                                 Ok(Some(quoted))
                             },
                             None => parse_error!("Missing quasiquoted value, depth: {}", depth)
@@ -92,7 +92,7 @@ impl<'a> Parser<'a> {
                     TUnquote => {
                         match try!(self.parse_node(depth)) {
                             Some(inner) => {
-                                let quoted = NList(vec![NIdentifier("unquote".to_str()), inner]);
+                                let quoted = NList(vec![NIdentifier("unquote".to_string()), inner]);
                                 Ok(Some(quoted))
                             },
                             None => parse_error!("Missing unquoted value, depth: {}", depth)
@@ -125,40 +125,40 @@ impl<'a> Parser<'a> {
 
 #[test]
 fn test_simple() {
-    assert_eq!(parse(&vec![TOpenParen, TIdentifier("+".to_str()), TCloseParen]).unwrap(),
-               vec![NList(vec![NIdentifier("+".to_str())])]);
+    assert_eq!(parse(&vec![TOpenParen, TIdentifier("+".to_string()), TCloseParen]).unwrap(),
+               vec![NList(vec![NIdentifier("+".to_string())])]);
 }
 
 #[test]
 fn test_nested() {
-    assert_eq!(parse(&vec![TOpenParen, TIdentifier("+".to_str()), TOpenParen, TIdentifier("+".to_str()), TInteger(1), TOpenParen, TIdentifier("+".to_str()), TInteger(3), TInteger(4), TCloseParen, TCloseParen, TInteger(5), TCloseParen]).unwrap(),
-               vec![NList(vec![NIdentifier("+".to_str()), NList(vec![NIdentifier("+".to_str()), NInteger(1), NList(vec![NIdentifier("+".to_str()), NInteger(3), NInteger(4)])]), NInteger(5)])]);
+    assert_eq!(parse(&vec![TOpenParen, TIdentifier("+".to_string()), TOpenParen, TIdentifier("+".to_string()), TInteger(1), TOpenParen, TIdentifier("+".to_string()), TInteger(3), TInteger(4), TCloseParen, TCloseParen, TInteger(5), TCloseParen]).unwrap(),
+               vec![NList(vec![NIdentifier("+".to_string()), NList(vec![NIdentifier("+".to_string()), NInteger(1), NList(vec![NIdentifier("+".to_string()), NInteger(3), NInteger(4)])]), NInteger(5)])]);
 }
 
 #[test]
 fn test_quoting() {
-    assert_eq!(parse(&vec![TQuote, TOpenParen, TIdentifier("a".to_str()), TCloseParen]).unwrap(),
-               vec![NList(vec![NIdentifier("quote".to_str()), NList(vec![NIdentifier("a".to_str())])])]);
-    assert_eq!(parse(&vec![TOpenParen, TIdentifier("list".to_str()), TQuote, TIdentifier("a".to_str()), TIdentifier("b".to_str()), TCloseParen]).unwrap(),
-               vec![NList(vec![NIdentifier("list".to_str()), NList(vec![NIdentifier("quote".to_str()), NIdentifier("a".to_str())]), NIdentifier("b".to_str())])]);
+    assert_eq!(parse(&vec![TQuote, TOpenParen, TIdentifier("a".to_string()), TCloseParen]).unwrap(),
+               vec![NList(vec![NIdentifier("quote".to_string()), NList(vec![NIdentifier("a".to_string())])])]);
+    assert_eq!(parse(&vec![TOpenParen, TIdentifier("list".to_string()), TQuote, TIdentifier("a".to_string()), TIdentifier("b".to_string()), TCloseParen]).unwrap(),
+               vec![NList(vec![NIdentifier("list".to_string()), NList(vec![NIdentifier("quote".to_string()), NIdentifier("a".to_string())]), NIdentifier("b".to_string())])]);
 }
 
 #[test]
 fn test_quasiquoting() {
-    assert_eq!(parse(&vec![TQuasiquote, TOpenParen, TUnquote, TIdentifier("a".to_str()), TCloseParen]).unwrap(),
-               vec![NList(vec![NIdentifier("quasiquote".to_str()), NList(vec![NList(vec![NIdentifier("unquote".to_str()), NIdentifier("a".to_str())])])])]);
-    assert_eq!(parse(&vec![TQuasiquote, TOpenParen, TUnquote, TIdentifier("a".to_str()), TIdentifier("b".to_str()), TUnquote, TIdentifier("c".to_str()), TCloseParen]).unwrap(),
-               vec![NList(vec![NIdentifier("quasiquote".to_str()), NList(vec![NList(vec![NIdentifier("unquote".to_str()), NIdentifier("a".to_str())]), NIdentifier("b".to_str()), NList(vec![NIdentifier("unquote".to_str()), NIdentifier("c".to_str())])])])]);
+    assert_eq!(parse(&vec![TQuasiquote, TOpenParen, TUnquote, TIdentifier("a".to_string()), TCloseParen]).unwrap(),
+               vec![NList(vec![NIdentifier("quasiquote".to_string()), NList(vec![NList(vec![NIdentifier("unquote".to_string()), NIdentifier("a".to_string())])])])]);
+    assert_eq!(parse(&vec![TQuasiquote, TOpenParen, TUnquote, TIdentifier("a".to_string()), TIdentifier("b".to_string()), TUnquote, TIdentifier("c".to_string()), TCloseParen]).unwrap(),
+               vec![NList(vec![NIdentifier("quasiquote".to_string()), NList(vec![NList(vec![NIdentifier("unquote".to_string()), NIdentifier("a".to_string())]), NIdentifier("b".to_string()), NList(vec![NIdentifier("unquote".to_string()), NIdentifier("c".to_string())])])])]);
 }
 
 #[test]
 fn test_bad_syntax() {
-    assert_eq!(parse(&vec![TCloseParen]).err().unwrap().to_str().as_slice(),
+    assert_eq!(parse(&vec![TCloseParen]).err().unwrap().to_string().as_slice(),
                "ParseError: Unexpected close paren, depth: 0");
-    assert_eq!(parse(&vec![TOpenParen, TOpenParen, TCloseParen]).err().unwrap().to_str().as_slice(),
+    assert_eq!(parse(&vec![TOpenParen, TOpenParen, TCloseParen]).err().unwrap().to_string().as_slice(),
                "ParseError: Unexpected end of input, depth: 1");
-    assert_eq!(parse(&vec![TOpenParen, TCloseParen, TCloseParen]).err().unwrap().to_str().as_slice(),
+    assert_eq!(parse(&vec![TOpenParen, TCloseParen, TCloseParen]).err().unwrap().to_string().as_slice(),
                "ParseError: Unexpected close paren, depth: 0");
-    assert_eq!(parse(&vec![TOpenParen, TOpenParen, TCloseParen, TOpenParen, TOpenParen, TCloseParen]).err().unwrap().to_str().as_slice(),
+    assert_eq!(parse(&vec![TOpenParen, TOpenParen, TCloseParen, TOpenParen, TOpenParen, TCloseParen]).err().unwrap().to_string().as_slice(),
                "ParseError: Unexpected end of input, depth: 2");
 }

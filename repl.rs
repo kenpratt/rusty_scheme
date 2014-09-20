@@ -15,17 +15,14 @@ fn prompt_for_input(prompt: &str) -> Option<String> {
 
         // parse into String and return
         let cs = CString::new(raw, true);
-        if cs.is_null() {
-            None
-        } else {
-            // add to shell history unless it's an empty string
-            if cs.len() > 0 {
-                add_history(raw);
-            }
 
-            // return Option<String>
-            cs.as_str().map(|s| s.to_str())
+        // add to shell history unless it's an empty string
+        if cs.len() > 0 {
+            add_history(raw);
         }
+
+        // return Option<String>
+        cs.as_str().map(|s| s.to_string())
     }
 }
 

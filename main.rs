@@ -12,11 +12,11 @@ mod interpreter;
 #[cfg(not(test))]
 mod repl;
 
-macro_rules! try_or_err_to_str(
+macro_rules! try_or_err_to_string(
     ($inp:expr) => (
         match $inp {
             Ok(v) => v,
-            Err(e) => return Err(e.to_str())
+            Err(e) => return Err(e.to_string())
         }
     )
 )
@@ -24,7 +24,7 @@ macro_rules! try_or_err_to_str(
 #[cfg(not(test))]
 fn main() {
     let raw_args = os::args();
-    let args = raw_args.tailn(1);
+    let args = raw_args.slice_from(1);
     match args.len() {
         0 => start_repl(),
         1 => run_file(args.get(0).unwrap()),
@@ -32,11 +32,12 @@ fn main() {
     }
 }
 
+#[allow(unused_must_use)]
 #[cfg(not(test))]
 fn run_file(filename: &String) {
     let path = Path::new(filename.as_slice());
     let mut file = File::open(&path).unwrap();
-    let contents = file.read_to_str().unwrap();
+    let contents = file.read_to_string().unwrap();
     let ctx = interpreter::new();
     execute(contents.as_slice(), ctx);
 }
@@ -49,9 +50,9 @@ fn start_repl() {
 }
 
 fn execute(input: &str, ctx: interpreter::Interpreter) -> Result<String, String> {
-    let tokens = try_or_err_to_str!(lexer::tokenize(input));
-    let ast = try_or_err_to_str!(parser::parse(&tokens));
-    let result = try_or_err_to_str!(ctx.run(ast.as_slice()));
+    let tokens = try_or_err_to_string!(lexer::tokenize(input));
+    let ast = try_or_err_to_string!(parser::parse(&tokens));
+    let result = try_or_err_to_string!(ctx.run(ast.as_slice()));
     Ok(format!("{}", result))
 }
 
