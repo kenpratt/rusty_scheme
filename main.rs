@@ -211,3 +211,12 @@ fn test_generated_runtime_error() {
 fn test_unicode_identifiers() {
     assert_execute!("(define ★ 3) (define ♫ 4) (+ ★ ♫)", "7");
 }
+
+#[test]
+fn test_macros() {
+    assert_execute!("(define-syntax-rule (incr x) (set! x (+ x 1))) (define a 1) (incr a) a", "2");
+    assert_execute!("(define-syntax-rule (incr x) (set! x (+ x 1))) (define x 1) (incr x) x", "2");
+    assert_execute!("(define-syntax-rule (incr x) (set! x (+ x 1))) (define-syntax-rule (foo x y z) (if x (incr y) (incr z))) (define a #t) (define b 10) (define c 20) (foo a b c) (set! a #f) (foo a b c) (list b c)", "'(11 21)");
+    assert_execute!("(define-syntax-rule (foo x) (if x (+ (foo #f) 3) 10)) (foo #t)", "13");
+    assert_execute!("(define-syntax-rule (testy a b c) (if a b c)) (testy #t 1 (error \"test\")) (testy #f (error \"test\") 2)", "2");
+}

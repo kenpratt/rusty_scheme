@@ -34,6 +34,7 @@ pub enum Value {
     VString(String),
     VList(Vec<Value>),
     VProcedure(Function),
+    VMacro(Vec<String>, Vec<Value>),
 }
 
 // null == empty list
@@ -94,8 +95,9 @@ impl Value {
                     s = s.append(n.to_raw_str().as_slice());
                 }
                 format!("({})", s)
-            }
-            VProcedure(_) => format!("#<procedure>")
+            },
+            VProcedure(_) => format!("#<procedure>"),
+            VMacro(_,_) => format!("#<macro>"),
         }
     }
 }
@@ -202,7 +204,8 @@ fn evaluate_value(value: &Value, env: Rc<RefCell<Environment>>) -> Result<Value,
                 Ok(null!())
             }
         },
-        &VProcedure(ref v) => Ok(VProcedure(v.clone()))
+        &VProcedure(ref v) => Ok(VProcedure(v.clone())),
+        &VMacro(ref a, ref b) => Ok(VMacro(a.clone(), b.clone())),
     }
 }
 
@@ -224,7 +227,8 @@ fn quote_value(value: &Value, quasi: bool, env: Rc<RefCell<Environment>>) -> Res
                 Ok(VList(res))
             }
         },
-        &VProcedure(ref v) => Ok(VProcedure(v.clone()))
+        &VProcedure(ref v) => Ok(VProcedure(v.clone())),
+        &VMacro(ref a, ref b) => Ok(VMacro(a.clone(), b.clone())),
     }
 }
 
@@ -235,6 +239,7 @@ fn evaluate_expression(values: &Vec<Value>, env: Rc<RefCell<Environment>>) -> Re
     let first = try!(evaluate_value(values.get(0), env.clone()));
     match first {
         VProcedure(f) => apply_function(&f, values.slice_from(1), env.clone()),
+        VMacro(a, b) => expand_macro(a, b, values.slice_from(1), env.clone()),
         _ => runtime_error!("First element in an expression must be a procedure: {}", first)
     }
 }
@@ -261,8 +266,39 @@ fn apply_function(func: &Function, args: &[Value], env: Rc<RefCell<Environment>>
     }
 }
 
+fn expand_macro(arg_names: Vec<String>, body: Vec<Value>, args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    let mut substitutions = HashMap::new();
+    for (name, arg) in arg_names.iter().zip(args.iter()) {
+        substitutions.insert(name.clone(), arg.clone());
+    }
+    let expanded = try!(expand_macro_substitute_values(body.as_slice(), substitutions));
+    Ok(try!(evaluate_values(expanded.as_slice(), env)))
+}
+
+fn expand_macro_substitute_values(values: &[Value], substitutions: HashMap<String,Value>) -> Result<Vec<Value>, RuntimeError> {
+    Ok(try!(result::collect(values.iter().map(|n| expand_macro_substitute_value(n, substitutions.clone())))))
+}
+
+fn expand_macro_substitute_value(value: &Value, substitutions: HashMap<String,Value>) -> Result<Value, RuntimeError> {
+    let res = match value {
+        &VSymbol(ref s) => {
+            if substitutions.contains_key(s) {
+                substitutions.find(s).unwrap().clone()
+            } else {
+                VSymbol(s.clone())
+            }
+        },
+        &VList(ref l) => {
+            VList(try!(expand_macro_substitute_values(l.as_slice(), substitutions)))
+        },
+        other => other.clone()
+    };
+    Ok(res)
+}
+
 static PREDEFINED_FUNCTIONS: &'static[(&'static str, Function)] = &[
     ("define", NativeFunction(native_define)),
+    ("define-syntax-rule", NativeFunction(native_define_syntax_rule)),
     ("set!", NativeFunction(native_set)),
     ("lambda", NativeFunction(native_lambda)),
     ("λ", NativeFunction(native_lambda)),
@@ -310,6 +346,41 @@ fn native_define(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value,
             }
         },
         _ => runtime_error!("Unexpected value for name in define: {}", args)
+    };
+
+    let already_defined = env.borrow().has(name);
+    if !already_defined {
+        env.borrow_mut().set(name.clone(), val);
+        Ok(null!())
+    } else {
+        runtime_error!("Duplicate define: {}", name)
+    }
+}
+
+fn native_define_syntax_rule(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        runtime_error!("Must supply exactly two arguments to define-syntax-rule: {}", args);
+    }
+    let (name, val) = match *args.get(0).unwrap() {
+        VList(ref list) => {
+            // (define-syntax-rule (<name> <args>) <template>)
+            if list.len() < 1 {
+                runtime_error!("Must supply at least one argument in list part of define-syntax-rule: {}", list);
+            }
+            match list[0] {
+                VSymbol(ref name) => {
+                    let arg_names = try!(result::collect(list.slice_from(1).iter().map(|i| match *i {
+                        VSymbol(ref s) => Ok(s.clone()),
+                        _ => runtime_error!("Unexpected argument in define-syntax-rule arguments: {}", i)
+                    })));
+                    let body = Vec::from_slice(args.slice_from(1));
+                    let val = VMacro(arg_names, body);
+                    (name, val)
+                },
+                _ => runtime_error!("Must supply a symbol in list part of define: {}", list)
+            }
+        },
+        _ => runtime_error!("Unexpected value for pattern in define-syntax-rule: {}", args)
     };
 
     let already_defined = env.borrow().has(name);
