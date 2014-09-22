@@ -129,6 +129,13 @@ fn test_procedure_definition() {
 }
 
 #[test]
+fn test_let_statement() {
+    assert_execute!("(let ((x 2)) (+ x x))", "4");
+    assert_execute!("(let ((x 2) (y 3)) (+ x y))", "5");
+    assert_execute!("(let ((x 2) (y 3)) (set! y (+ y 1)) (+ x y))", "6");
+}
+
+#[test]
 fn test_conditional_execution() {
     assert_execute!("(if #t 1 2)", "1");
     assert_execute!("(if #f 1 2)", "2");

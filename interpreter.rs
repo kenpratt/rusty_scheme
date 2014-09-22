@@ -299,6 +299,7 @@ fn expand_macro_substitute_value(value: &Value, substitutions: HashMap<String,Va
 static PREDEFINED_FUNCTIONS: &'static[(&'static str, Function)] = &[
     ("define", NativeFunction(native_define)),
     ("define-syntax-rule", NativeFunction(native_define_syntax_rule)),
+    ("let", NativeFunction(native_let)),
     ("set!", NativeFunction(native_set)),
     ("lambda", NativeFunction(native_lambda)),
     ("λ", NativeFunction(native_lambda)),
@@ -390,6 +391,40 @@ fn native_define_syntax_rule(args: &[Value], env: Rc<RefCell<Environment>>) -> R
     } else {
         runtime_error!("Duplicate define: {}", name)
     }
+}
+
+fn native_let(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() < 2 {
+        runtime_error!("Must supply at least two arguments to let: {}", args);
+    }
+
+    // create a new, child environment for the let expression and define the arguments as local variables
+    let let_env = Environment::new_child(env.clone());
+    match *args.get(0).unwrap() {
+        VList(ref list) => {
+            for i in list.iter() {
+                match *i {
+                    VList(ref entry) => {
+                        if entry.len() != 2 {
+                            runtime_error!("Let expression values must have exactly 2 params: {}", entry);
+                        }
+                        let name = match entry[0] {
+                            VSymbol(ref x) => x,
+                            _ => runtime_error!("Unexpected value for name in set!: {}", args)
+                        };
+                        let val = try!(evaluate_value(entry.get(1), env.clone()));
+                        let_env.borrow_mut().set(name.clone(), val);
+                    },
+                    _ => runtime_error!("Unexpected value inside expression in let: {}", i)
+                }
+            }
+        },
+        _ => runtime_error!("Unexpected value for expressions in let: {}", args)
+    };
+
+    // evaluate let statement body with new environment
+    let body = args.slice_from(1);
+    evaluate_values(body, let_env.clone())
 }
 
 fn native_set(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
