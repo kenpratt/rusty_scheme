@@ -129,6 +129,11 @@ fn test_procedure_definition() {
 }
 
 #[test]
+fn test_begin_statement() {
+    assert_execute!("(define x 1) (begin (set! x 5) (set! x (+ x 2)) x)", "7");
+}
+
+#[test]
 fn test_let_statement() {
     assert_execute!("(let ((x 2)) (+ x x))", "4");
     assert_execute!("(let ((x 2) (y 3)) (+ x y))", "5");

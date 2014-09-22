@@ -299,6 +299,7 @@ fn expand_macro_substitute_value(value: &Value, substitutions: HashMap<String,Va
 static PREDEFINED_FUNCTIONS: &'static[(&'static str, Function)] = &[
     ("define", NativeFunction(native_define)),
     ("define-syntax-rule", NativeFunction(native_define_syntax_rule)),
+    ("begin", NativeFunction(native_begin)),
     ("let", NativeFunction(native_let)),
     ("set!", NativeFunction(native_set)),
     ("lambda", NativeFunction(native_lambda)),
@@ -393,6 +394,13 @@ fn native_define_syntax_rule(args: &[Value], env: Rc<RefCell<Environment>>) -> R
     }
 }
 
+fn native_begin(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() < 1 {
+        runtime_error!("Must supply at least one argument to begin: {}", args);
+    }
+    evaluate_values(args, env)
+}
+
 fn native_let(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
     if args.len() < 2 {
         runtime_error!("Must supply at least two arguments to let: {}", args);
@@ -406,7 +414,7 @@ fn native_let(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, Ru
                 match *i {
                     VList(ref entry) => {
                         if entry.len() != 2 {
-                            runtime_error!("Let expression values must have exactly 2 params: {}", entry);
+                            runtime_error!("let expression values must have exactly 2 params: {}", entry);
                         }
                         let name = match entry[0] {
                             VSymbol(ref x) => x,
