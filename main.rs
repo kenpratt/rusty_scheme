@@ -27,7 +27,7 @@ fn main() {
     let args = raw_args.slice_from(1);
     match args.len() {
         0 => start_repl(),
-        1 => run_file(args.get(0).unwrap()),
+        1 => run_file(&args[0]),
         _ => fail!("You must provide 0 or 1 arguments to RustyScheme: {}", args)
     }
 }

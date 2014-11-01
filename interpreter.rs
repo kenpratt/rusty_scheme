@@ -1,7 +1,6 @@
 use parser::*;
 
 use std::fmt;
-use std::result;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -90,9 +89,9 @@ impl Value {
                     if first {
                         first = false;
                     } else {
-                        s = s.append(" ");
+                        s.push_str(" ");
                     }
-                    s = s.append(n.to_raw_str().as_slice());
+                    s.push_str(n.to_raw_str().as_slice());
                 }
                 format!("({})", s)
             },
@@ -183,7 +182,7 @@ impl Environment {
 }
 
 fn evaluate_values(values: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
-    result::fold(values.iter().map(|v| evaluate_value(v, env.clone())), null!(), |_, r| r)
+    values.iter().fold(Ok(null!()), |_, v| evaluate_value(v, env.clone()))
 }
 
 fn evaluate_value(value: &Value, env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
@@ -223,8 +222,9 @@ fn quote_value(value: &Value, quasi: bool, env: Rc<RefCell<Environment>>) -> Res
                 }
                 evaluate_value(&vec[1], env.clone())
             } else {
-                let res = try!(result::collect(vec.iter().map(|v| quote_value(v, quasi, env.clone()))));
-                Ok(VList(res))
+                let res: Result<Vec<Value>, RuntimeError> = vec.iter().map(|v| quote_value(v, quasi, env.clone())).collect();
+                let new_vec = try!(res);
+                Ok(VList(new_vec))
             }
         },
         &VProcedure(ref v) => Ok(VProcedure(v.clone())),
@@ -236,7 +236,7 @@ fn evaluate_expression(values: &Vec<Value>, env: Rc<RefCell<Environment>>) -> Re
     if values.len() == 0 {
         runtime_error!("Can't evaluate an empty expression: {}", values);
     }
-    let first = try!(evaluate_value(values.get(0), env.clone()));
+    let first = try!(evaluate_value(&values[0], env.clone()));
     match first {
         VProcedure(f) => apply_function(&f, values.slice_from(1), env.clone()),
         VMacro(a, b) => expand_macro(a, b, values.slice_from(1), env.clone()),
@@ -276,7 +276,7 @@ fn expand_macro(arg_names: Vec<String>, body: Vec<Value>, args: &[Value], env: R
 }
 
 fn expand_macro_substitute_values(values: &[Value], substitutions: HashMap<String,Value>) -> Result<Vec<Value>, RuntimeError> {
-    Ok(try!(result::collect(values.iter().map(|n| expand_macro_substitute_value(n, substitutions.clone())))))
+    values.iter().map(|n| expand_macro_substitute_value(n, substitutions.clone())).collect()
 }
 
 fn expand_macro_substitute_value(value: &Value, substitutions: HashMap<String,Value>) -> Result<Value, RuntimeError> {
@@ -323,9 +323,9 @@ fn native_define(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value,
     if args.len() < 2 {
         runtime_error!("Must supply at least two arguments to define: {}", args);
     }
-    let (name, val) = match *args.get(0).unwrap() {
+    let (name, val) = match args[0] {
         VSymbol(ref name) => {
-            let val = try!(evaluate_value(args.get(1).unwrap(), env.clone()));
+            let val = try!(evaluate_value(&args[1], env.clone()));
             (name, val)
         },
         VList(ref list) => {
@@ -336,11 +336,12 @@ fn native_define(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value,
             }
             match list[0] {
                 VSymbol(ref name) => {
-                    let arg_names = try!(result::collect(list.slice_from(1).iter().map(|i| match *i {
+                    let res: Result<Vec<String>, RuntimeError> = list.slice_from(1).iter().map(|i| match *i {
                         VSymbol(ref s) => Ok(s.clone()),
                         _ => runtime_error!("Unexpected argument in define arguments: {}", i)
-                    })));
-                    let body = Vec::from_slice(args.slice_from(1));
+                    }).collect();
+                    let arg_names = try!(res);
+                    let body = args.slice_from(1).to_vec();
                     let val = VProcedure(SchemeFunction(arg_names, body, env.clone()));
                     (name, val)
                 },
@@ -363,7 +364,7 @@ fn native_define_syntax_rule(args: &[Value], env: Rc<RefCell<Environment>>) -> R
     if args.len() != 2 {
         runtime_error!("Must supply exactly two arguments to define-syntax-rule: {}", args);
     }
-    let (name, val) = match *args.get(0).unwrap() {
+    let (name, val) = match args[0] {
         VList(ref list) => {
             // (define-syntax-rule (<name> <args>) <template>)
             if list.len() < 1 {
@@ -371,11 +372,12 @@ fn native_define_syntax_rule(args: &[Value], env: Rc<RefCell<Environment>>) -> R
             }
             match list[0] {
                 VSymbol(ref name) => {
-                    let arg_names = try!(result::collect(list.slice_from(1).iter().map(|i| match *i {
+                    let res: Result<Vec<String>, RuntimeError> = list.slice_from(1).iter().map(|i| match *i {
                         VSymbol(ref s) => Ok(s.clone()),
                         _ => runtime_error!("Unexpected argument in define-syntax-rule arguments: {}", i)
-                    })));
-                    let body = Vec::from_slice(args.slice_from(1));
+                    }).collect();
+                    let arg_names = try!(res);
+                    let body = args.slice_from(1).to_vec();
                     let val = VMacro(arg_names, body);
                     (name, val)
                 },
@@ -408,7 +410,7 @@ fn native_let(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, Ru
 
     // create a new, child environment for the let expression and define the arguments as local variables
     let let_env = Environment::new_child(env.clone());
-    match *args.get(0).unwrap() {
+    match args[0] {
         VList(ref list) => {
             for i in list.iter() {
                 match *i {
@@ -420,7 +422,7 @@ fn native_let(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, Ru
                             VSymbol(ref x) => x,
                             _ => runtime_error!("Unexpected value for name in set!: {}", args)
                         };
-                        let val = try!(evaluate_value(entry.get(1), env.clone()));
+                        let val = try!(evaluate_value(&entry[1], env.clone()));
                         let_env.borrow_mut().set(name.clone(), val);
                     },
                     _ => runtime_error!("Unexpected value inside expression in let: {}", i)
@@ -439,13 +441,13 @@ fn native_set(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, Ru
     if args.len() != 2 {
         runtime_error!("Must supply exactly two arguments to set!: {}", args);
     }
-    let name = match *args.get(0).unwrap() {
+    let name = match args[0] {
         VSymbol(ref x) => x,
         _ => runtime_error!("Unexpected value for name in set!: {}", args)
     };
     let already_defined = env.borrow().has(name);
     if already_defined {
-        let val = try!(evaluate_value(args.get(1).unwrap(), env.clone()));
+        let val = try!(evaluate_value(&args[1], env.clone()));
         env.borrow_mut().set(name.clone(), val);
         Ok(null!())
     } else {
@@ -457,16 +459,17 @@ fn native_lambda(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value,
     if args.len() < 2 {
         runtime_error!("Must supply at least two arguments to lambda: {}", args);
     }
-    let arg_names = match *args.get(0).unwrap() {
+    let arg_names = match args[0] {
         VList(ref list) => {
-            try!(result::collect(list.iter().map(|i| match *i {
+            let res: Result<Vec<String>, RuntimeError> = list.iter().map(|i| match *i {
                 VSymbol(ref s) => Ok(s.clone()),
                 _ => runtime_error!("Unexpected argument in lambda arguments: {}", i)
-            })))
+            }).collect();
+            try!(res)
         }
         _ => runtime_error!("Unexpected value for arguments in lambda: {}", args)
     };
-    let body = Vec::from_slice(args.slice_from(1));
+    let body = args.slice_from(1).to_vec();
     Ok(VProcedure(SchemeFunction(arg_names, body, env.clone())))
 }
 
@@ -474,10 +477,10 @@ fn native_if(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, Run
     if args.len() != 3 {
         runtime_error!("Must supply exactly three arguments to if: {}", args);
     }
-    let condition = try!(evaluate_value(args.get(0).unwrap(), env.clone()));
+    let condition = try!(evaluate_value(&args[0], env.clone()));
     match condition {
-        VBoolean(false) => evaluate_value(args.get(2).unwrap(), env.clone()),
-        _ => evaluate_value(args.get(1).unwrap(), env.clone())
+        VBoolean(false) => evaluate_value(&args[2], env.clone()),
+        _ => evaluate_value(&args[1], env.clone())
     }
 }
 
@@ -500,8 +503,8 @@ fn native_minus(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, 
     if args.len() != 2 {
         runtime_error!("Must supply exactly two arguments to -: {}", args);
     }
-    let l = try!(evaluate_value(args.get(0).unwrap(), env.clone()));
-    let r = try!(evaluate_value(args.get(1).unwrap(), env.clone()));
+    let l = try!(evaluate_value(&args[0], env.clone()));
+    let r = try!(evaluate_value(&args[1], env.clone()));
     let mut result = match l {
         VInteger(x) => x,
         _ => runtime_error!("Unexpected value during -: {}", args)
@@ -537,7 +540,8 @@ fn native_or(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, Run
 }
 
 fn native_list(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
-    let elements = try!(result::collect(args.iter().map(|n| evaluate_value(n, env.clone()))));
+    let res: Result<Vec<Value>, RuntimeError> = args.iter().map(|n| evaluate_value(n, env.clone())).collect();
+    let elements = try!(res);
     Ok(VList(elements))
 }
 
@@ -545,21 +549,21 @@ fn native_quote(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, 
     if args.len() != 1 {
         runtime_error!("Must supply exactly one argument to quote: {}", args);
     }
-    quote_value(args.get(0).unwrap(), false, env.clone())
+    quote_value(&args[0], false, env.clone())
 }
 
 fn native_quasiquote(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         runtime_error!("Must supply exactly one argument to quasiquote: {}", args);
     }
-    quote_value(args.get(0).unwrap(), true, env.clone())
+    quote_value(&args[0], true, env.clone())
 }
 
 fn native_error(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         runtime_error!("Must supply exactly one arguments to error: {}", args);
     }
-    let e = try!(evaluate_value(args.get(0).unwrap(), env.clone()));
+    let e = try!(evaluate_value(&args[0], env.clone()));
     runtime_error!("{}", e);
 }
 
@@ -567,11 +571,11 @@ fn native_apply(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, 
     if args.len() != 2 {
         runtime_error!("Must supply exactly two arguments to apply: {}", args);
     }
-    let func = match try!(evaluate_value(args.get(0).unwrap(), env.clone())) {
+    let func = match try!(evaluate_value(&args[0], env.clone())) {
         VProcedure(func) => func,
         _ => runtime_error!("First argument to apply must be a procedure: {}", args)
     };
-    let func_args = match try!(evaluate_value(args.get(1).unwrap(), env.clone())) {
+    let func_args = match try!(evaluate_value(&args[1], env.clone())) {
         VList(func_args) => func_args,
         _ => runtime_error!("Second argument to apply must be a list of arguments: {}", args)
     };
@@ -584,7 +588,7 @@ fn native_eval(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, R
     }
 
     // eval is basically just a double-evaluation -- the first evaluate returns the data using the local envirnoment, and the second evaluate evaluates the data as code using the global environment
-    let res = try!(evaluate_value(args.get(0).unwrap(), env.clone()));
+    let res = try!(evaluate_value(&args[0], env.clone()));
     evaluate_value(&res, Environment::get_root(env))
 }
 
@@ -593,7 +597,7 @@ fn native_write(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, 
         runtime_error!("Must supply exactly one argument to write: {}", args);
     }
 
-    let val = try!(evaluate_value(args.get(0).unwrap(), env.clone()));
+    let val = try!(evaluate_value(&args[0], env.clone()));
     print!("{}", val);
     Ok(null!())
 }

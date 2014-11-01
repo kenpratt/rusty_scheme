@@ -105,7 +105,7 @@ impl<'a> Lexer<'a> {
                         },
                         '+' | '-' => {
                             match self.peek() {
-                                Some('0'..'9') => {
+                                Some('0'...'9') => {
                                     // skip past the +/- symbol and parse the number
                                     self.advance();
                                     let val = try!(self.parse_number());
@@ -125,7 +125,7 @@ impl<'a> Lexer<'a> {
                             self.tokens.push(TBoolean(val));
                             try!(self.parse_delimiter());
                         },
-                        '0'..'9' => {
+                        '0'...'9' => {
                             // don't advance -- let parse_number advance as needed
                             let val = try!(self.parse_number());
                             self.tokens.push(TInteger(val));
@@ -158,8 +158,8 @@ impl<'a> Lexer<'a> {
             match self.current() {
                 Some(c) => {
                     match c {
-                        '0'..'9' => {
-                            s.push_char(c);
+                        '0'...'9' => {
+                            s.push(c);
                             self.advance();
                         },
                         _ => break
@@ -203,7 +203,7 @@ impl<'a> Lexer<'a> {
                             break;
                         },
                         _ => {
-                            s.push_char(c);
+                            s.push(c);
                             self.advance();
                         },
                     }
@@ -228,7 +228,7 @@ impl<'a> Lexer<'a> {
                             break;
                         },
                         _ => {
-                            s.push_char(c);
+                            s.push(c);
                             self.advance();
                         }
                     }
