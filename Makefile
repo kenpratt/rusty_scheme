@@ -13,4 +13,7 @@ bin/test: *.rs
 watch: FORCE
 	kicker -e "make test" -c -l 0.1 *.rs
 
+clean:
+	rm -f bin/*
+
 FORCE:
