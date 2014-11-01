@@ -20,12 +20,13 @@
 ** TODO Unify AST and Intepreter enums? -> hard, have to include procedures somehow :(
 ** DONE Print statement
 ** DONE Run files from file system
-** TODO Let expressions
+** DONE Let expressions
 ** DONE Shortcut syntax for defining functions (define (myfunc x) (+ x x))
 ** DONE Try to replace most for loops with iterators
 ** TODO See if I can internalize the RefCell contract and expose something simpler for Envirnoment (probably not)
 ** TODO Tab completion in REPL (based on defined functions and constants, and maybe even local vars?)
-** TODO Add macros? (hygenic only?)
+** DONE Add macros
+** TODO Hygenic macros
 ** TODO call/cc (implement with workers? (probably not possible) or manual stack/instruction pointer?)
 ** TODO Bytecode VM (stack, or register based? -> stack is probably easier)
 ** TODO JIT

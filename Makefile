@@ -1,3 +1,5 @@
+all: bin/rusty_scheme
+
 run: bin/rusty_scheme
 	./bin/rusty_scheme
 
