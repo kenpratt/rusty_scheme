@@ -12,6 +12,9 @@ fn prompt_for_input(prompt: &str) -> Option<String> {
     unsafe {
         // wait for enter/CTRL-C/CTRL-D
         let raw = readline(prompt_c_str.as_ptr());
+        if raw.is_null() {
+            return None;
+        }
 
         // parse into String and return
         let cs = CString::new(raw, true);
