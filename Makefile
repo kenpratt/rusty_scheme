@@ -1,17 +1,17 @@
 run: bin/rusty_scheme
 	./bin/rusty_scheme
 
-bin/rusty_scheme: *.rs
-	rustc --color always -o bin/rusty_scheme main.rs
+bin/rusty_scheme: src/*.rs
+	rustc --color always -o bin/rusty_scheme src/main.rs
 
 test: bin/test
 	./bin/test
 
-bin/test: *.rs
-	rustc --color always --test -o bin/test main.rs
+bin/test: src/*.rs
+	rustc --color always --test -o bin/test src/main.rs
 
 watch: FORCE
-	kicker -e "make test" -c -l 0.1 *.rs
+	kicker -e "make test" -c -l 0.1 src/*.rs
 
 clean:
 	rm -f bin/*
