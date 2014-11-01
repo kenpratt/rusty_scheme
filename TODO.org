@@ -1,0 +1,65 @@
+* Actual todo
+** DONE See if I can get the tokenizer to return lifetime strs instead of Strings -> NOPE http://www.reddit.com/r/rust/comments/28waq4/how_do_i_create_and_return_a_str_dynamically/
+** DONE Parse to AST!
+** DONE Add functions
+** DONE Add nil
+** DONE Print result to string
+** DONE Implement set!
+** DONE Conditionals
+** DONE Boolean logic/operations
+** DONE Symbols
+** DONE Add quote operator
+** DONE Add quote syntax sugar
+** DONE Add quasiquote/unquote operators
+** DONE Add quasiquote/unquote syntax sugar
+** DONE Lists as data
+** DONE Apply
+** DONE Eval
+** DONE REPL
+** DONE Add up/down arrows to REPL
+** TODO Unify AST and Intepreter enums? -> hard, have to include procedures somehow :(
+** DONE Print statement
+** DONE Run files from file system
+** TODO Let expressions
+** DONE Shortcut syntax for defining functions (define (myfunc x) (+ x x))
+** DONE Try to replace most for loops with iterators
+** TODO See if I can internalize the RefCell contract and expose something simpler for Envirnoment (probably not)
+** TODO Tab completion in REPL (based on defined functions and constants, and maybe even local vars?)
+** TODO Add macros? (hygenic only?)
+** TODO call/cc (implement with workers? (probably not possible) or manual stack/instruction pointer?)
+** TODO Bytecode VM (stack, or register based? -> stack is probably easier)
+** TODO JIT
+
+* Unimplemented/maybe TODO
+** TODO Floats
+** TODO Ecaping doubles quotes and backslashes in strings
+** TODO Restricting non-global defines? (seems like there's mixed implementations on this, but should at least be conistent)
+** TODO Tail call optimization
+** TODO Nested quasiquotes
+** TODO unquote-splicing in quasiquote
+** TODO quote-syntax
+
+* Interpreters: Existing languages
+** Ruby 1.8: normal interpreter, no precompilation, no VM.
+** Ruby 1.9: no precompilation, compiles to bytecode, runs on VM (YARV), VM is interpreted.
+** JVM: precompiles to bytecode, runs on VM, VM is interpreted with a tracing JIT (or static JIT? depends in the VM?)
+** V8: no precomplation, no VM, no interpreter, static JIT ("full compiler") compiles JS to machine code when it's run for the first time, tracing JIT ("optimizing compiler") watches for hot functions and re-compiles with assumptions & guards baked in, and backs out to static JIT if it breaks. Both JITs are stack machines.
+** Firefox: no precompilation, compiles to bytecode, VM interpreter runs, then first tracing "baseline" JIT, then second optimizing tracing JIT ("Ion") kicks in. VM and JITs are all stack machines, VM interpreter stack and JITs native C stacks.
+** Safari: no precompilation, VM interpreter, first tracing JIT, second optimizing JIT. Both are register machines, not stack machines. Or actually, maybe most platforms ship with interpreter turned off, so it's just a baseline JIT and an optimizing JIT, like V8 but operating on intermediate bytecode.
+** Rust: precompiled to machine code (obviously, I guess).
+** Python (CPython): no precompilation, compiles to bytecode on first run, VM & VM interpreter.
+** PyPy: JIT'ed interpreter written in RPython.
+
+* Interpreters: My options
+** Static compilation (generate machine code statically)
+** Vanilla interpreter
+** Static JIT (generate machine code on first run)
+** Vanilla interpreter + tracing JIT (profile & generate machine code for hot loops/functions)
+** Bytecode + VM interpreter
+** Bytecode + VM w/ static JIT (generate machine code on first execution of each operation)
+** Bytecode + VM w/ interpreter & tracing JIT (profile & generate machine code for hot loops)
+** Plan: do the non-machine code ones first (vanilla interpreter, bytecode + VM interpreter), then try static compilation, then static JITs, then tracing JITs? Or if it's too hard to do a full static compile, just do VM interpreter + tracing JIT, as that's probably the least amount of machine code.
+
+* Resources
+http://home.pipeline.com/~hbaker1/LinearLisp.html
+http://blog.reverberate.org/2012/12/hello-jit-world-joy-of-simple-jits.html?m=1
