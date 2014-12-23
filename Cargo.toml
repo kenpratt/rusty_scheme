@@ -1,0 +1,5 @@
+[package]
+
+name = "rusty_scheme_cargo"
+version = "0.0.1"
+authors = ["Chris Cole <cjcole@alum.mit.edu>"]

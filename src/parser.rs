@@ -1,7 +1,8 @@
+extern crate core;
+
 use lexer::*;
 
 use std::fmt;
-use std::slice;
 
 pub fn parse(tokens: &Vec<Token>) -> Result<Vec<Node>, ParseError> {
     Parser::parse(tokens)
@@ -9,11 +10,11 @@ pub fn parse(tokens: &Vec<Token>) -> Result<Vec<Node>, ParseError> {
 
 #[deriving(Show, PartialEq, Clone)]
 pub enum Node {
-    NIdentifier(String),
-    NInteger(int),
-    NBoolean(bool),
-    NString(String),
-    NList(Vec<Node>),
+    Identifier(String),
+    Integer(int),
+    Boolean(bool),
+    String(String),
+    List(Vec<Node>),
 }
 
 pub struct ParseError {
@@ -26,14 +27,14 @@ impl fmt::Show for ParseError {
     }
 }
 
-macro_rules! parse_error(
+macro_rules! parse_error {
     ($($arg:tt)*) => (
         return Err(ParseError { message: format!($($arg)*)})
     )
-)
+}
 
 struct Parser<'a> {
-    tokens: slice::Items<'a, Token>
+    tokens: core::slice::Iter<'a, Token>,
 }
 
 impl<'a> Parser<'a> {
@@ -60,55 +61,55 @@ impl<'a> Parser<'a> {
         match self.tokens.next() {
             Some(token) => {
                 match *token {
-                    TOpenParen => {
+                    Token::OpenParen => {
                         let inner = try!(self.parse_nodes(depth + 1));
-                        Ok(Some(NList(inner)))
+                        Ok(Some(Node::List(inner)))
                     },
-                    TCloseParen => {
+                    Token::CloseParen => {
                         if depth > 0 {
                             Ok(None)
                         } else {
                             parse_error!("Unexpected close paren, depth: {}", depth)
                         }
                     },
-                    TQuote => {
+                    Token::Quote => {
                         match try!(self.parse_node(depth)) {
                             Some(inner) => {
-                                let quoted = NList(vec![NIdentifier("quote".to_string()), inner]);
+                                let quoted = Node::List(vec![Node::Identifier("quote".to_string()), inner]);
                                 Ok(Some(quoted))
                             },
                             None => parse_error!("Missing quoted value, depth: {}", depth)
                         }
                     },
-                    TQuasiquote => {
+                    Token::Quasiquote => {
                         match try!(self.parse_node(depth)) {
                             Some(inner) => {
-                                let quoted = NList(vec![NIdentifier("quasiquote".to_string()), inner]);
+                                let quoted = Node::List(vec![Node::Identifier("quasiquote".to_string()), inner]);
                                 Ok(Some(quoted))
                             },
                             None => parse_error!("Missing quasiquoted value, depth: {}", depth)
                         }
                     }
-                    TUnquote => {
+                    Token::Unquote => {
                         match try!(self.parse_node(depth)) {
                             Some(inner) => {
-                                let quoted = NList(vec![NIdentifier("unquote".to_string()), inner]);
+                                let quoted = Node::List(vec![Node::Identifier("unquote".to_string()), inner]);
                                 Ok(Some(quoted))
                             },
                             None => parse_error!("Missing unquoted value, depth: {}", depth)
                         }
                     }
-                    TIdentifier(ref val) => {
-                        Ok(Some(NIdentifier(val.clone())))
+                    Token::Identifier(ref val) => {
+                        Ok(Some(Node::Identifier(val.clone())))
                     },
-                    TInteger(ref val) => {
-                        Ok(Some(NInteger(val.clone())))
+                    Token::Integer(ref val) => {
+                        Ok(Some(Node::Integer(val.clone())))
                     },
-                    TBoolean(ref val) => {
-                        Ok(Some(NBoolean(val.clone())))
+                    Token::Boolean(ref val) => {
+                        Ok(Some(Node::Boolean(val.clone())))
                     },
-                    TString(ref val) => {
-                        Ok(Some(NString(val.clone())))
+                    Token::String(ref val) => {
+                        Ok(Some(Node::String(val.clone())))
                     }
                 }
             },
@@ -125,40 +126,40 @@ impl<'a> Parser<'a> {
 
 #[test]
 fn test_simple() {
-    assert_eq!(parse(&vec![TOpenParen, TIdentifier("+".to_string()), TCloseParen]).unwrap(),
-               vec![NList(vec![NIdentifier("+".to_string())])]);
+    assert_eq!(parse(&vec![Token::OpenParen, TIdentifier("+".to_string()), TCloseParen]).unwrap(),
+               vec![Node::List(vec![Node::Identifier("+".to_string())])]);
 }
 
 #[test]
 fn test_nested() {
-    assert_eq!(parse(&vec![TOpenParen, TIdentifier("+".to_string()), TOpenParen, TIdentifier("+".to_string()), TInteger(1), TOpenParen, TIdentifier("+".to_string()), TInteger(3), TInteger(4), TCloseParen, TCloseParen, TInteger(5), TCloseParen]).unwrap(),
-               vec![NList(vec![NIdentifier("+".to_string()), NList(vec![NIdentifier("+".to_string()), NInteger(1), NList(vec![NIdentifier("+".to_string()), NInteger(3), NInteger(4)])]), NInteger(5)])]);
+    assert_eq!(parse(&vec![Token::OpenParen, TIdentifier("+".to_string()), Token::OpenParen, TIdentifier("+".to_string()), TInteger(1), Token::OpenParen, TIdentifier("+".to_string()), TInteger(3), TInteger(4), TCloseParen, TCloseParen, TInteger(5), TCloseParen]).unwrap(),
+               vec![Node::List(vec![Node::Identifier("+".to_string()), Node::List(vec![Node::Identifier("+".to_string()), Node::Integer(1), Node::List(vec![Node::Identifier("+".to_string()), Node::Integer(3), Node::Integer(4)])]), Node::Integer(5)])]);
 }
 
 #[test]
 fn test_quoting() {
-    assert_eq!(parse(&vec![TQuote, TOpenParen, TIdentifier("a".to_string()), TCloseParen]).unwrap(),
-               vec![NList(vec![NIdentifier("quote".to_string()), NList(vec![NIdentifier("a".to_string())])])]);
-    assert_eq!(parse(&vec![TOpenParen, TIdentifier("list".to_string()), TQuote, TIdentifier("a".to_string()), TIdentifier("b".to_string()), TCloseParen]).unwrap(),
-               vec![NList(vec![NIdentifier("list".to_string()), NList(vec![NIdentifier("quote".to_string()), NIdentifier("a".to_string())]), NIdentifier("b".to_string())])]);
+    assert_eq!(parse(&vec![TQuote, Token::OpenParen, TIdentifier("a".to_string()), TCloseParen]).unwrap(),
+               vec![Node::List(vec![Node::Identifier("quote".to_string()), Node::List(vec![Node::Identifier("a".to_string())])])]);
+    assert_eq!(parse(&vec![Token::OpenParen, TIdentifier("list".to_string()), TQuote, TIdentifier("a".to_string()), TIdentifier("b".to_string()), TCloseParen]).unwrap(),
+               vec![Node::List(vec![Node::Identifier("list".to_string()), Node::List(vec![Node::Identifier("quote".to_string()), Node::Identifier("a".to_string())]), Node::Identifier("b".to_string())])]);
 }
 
 #[test]
 fn test_quasiquoting() {
-    assert_eq!(parse(&vec![TQuasiquote, TOpenParen, TUnquote, TIdentifier("a".to_string()), TCloseParen]).unwrap(),
-               vec![NList(vec![NIdentifier("quasiquote".to_string()), NList(vec![NList(vec![NIdentifier("unquote".to_string()), NIdentifier("a".to_string())])])])]);
-    assert_eq!(parse(&vec![TQuasiquote, TOpenParen, TUnquote, TIdentifier("a".to_string()), TIdentifier("b".to_string()), TUnquote, TIdentifier("c".to_string()), TCloseParen]).unwrap(),
-               vec![NList(vec![NIdentifier("quasiquote".to_string()), NList(vec![NList(vec![NIdentifier("unquote".to_string()), NIdentifier("a".to_string())]), NIdentifier("b".to_string()), NList(vec![NIdentifier("unquote".to_string()), NIdentifier("c".to_string())])])])]);
+    assert_eq!(parse(&vec![TQuasiquote, Token::OpenParen, TUnquote, TIdentifier("a".to_string()), TCloseParen]).unwrap(),
+               vec![Node::List(vec![Node::Identifier("quasiquote".to_string()), Node::List(vec![Node::List(vec![Node::Identifier("unquote".to_string()), Node::Identifier("a".to_string())])])])]);
+    assert_eq!(parse(&vec![TQuasiquote, Token::OpenParen, TUnquote, TIdentifier("a".to_string()), TIdentifier("b".to_string()), TUnquote, TIdentifier("c".to_string()), TCloseParen]).unwrap(),
+               vec![Node::List(vec![Node::Identifier("quasiquote".to_string()), Node::List(vec![Node::List(vec![Node::Identifier("unquote".to_string()), Node::Identifier("a".to_string())]), Node::Identifier("b".to_string()), Node::List(vec![Node::Identifier("unquote".to_string()), Node::Identifier("c".to_string())])])])]);
 }
 
 #[test]
 fn test_bad_syntax() {
     assert_eq!(parse(&vec![TCloseParen]).err().unwrap().to_string().as_slice(),
                "ParseError: Unexpected close paren, depth: 0");
-    assert_eq!(parse(&vec![TOpenParen, TOpenParen, TCloseParen]).err().unwrap().to_string().as_slice(),
+    assert_eq!(parse(&vec![Token::OpenParen, Token::OpenParen, TCloseParen]).err().unwrap().to_string().as_slice(),
                "ParseError: Unexpected end of input, depth: 1");
-    assert_eq!(parse(&vec![TOpenParen, TCloseParen, TCloseParen]).err().unwrap().to_string().as_slice(),
+    assert_eq!(parse(&vec![Token::OpenParen, TCloseParen, TCloseParen]).err().unwrap().to_string().as_slice(),
                "ParseError: Unexpected close paren, depth: 0");
-    assert_eq!(parse(&vec![TOpenParen, TOpenParen, TCloseParen, TOpenParen, TOpenParen, TCloseParen]).err().unwrap().to_string().as_slice(),
+    assert_eq!(parse(&vec![Token::OpenParen, Token::OpenParen, TCloseParen, Token::OpenParen, Token::OpenParen, TCloseParen]).err().unwrap().to_string().as_slice(),
                "ParseError: Unexpected end of input, depth: 2");
 }

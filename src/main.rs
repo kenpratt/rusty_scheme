@@ -12,14 +12,14 @@ mod interpreter;
 #[cfg(not(test))]
 mod repl;
 
-macro_rules! try_or_err_to_string(
+macro_rules! try_or_err_to_string {
     ($inp:expr) => (
         match $inp {
             Ok(v) => v,
             Err(e) => return Err(e.to_string())
         }
     )
-)
+}
 
 #[cfg(not(test))]
 fn main() {
@@ -28,7 +28,7 @@ fn main() {
     match args.len() {
         0 => start_repl(),
         1 => run_file(&args[0]),
-        _ => fail!("You must provide 0 or 1 arguments to RustyScheme: {}", args)
+        _ => panic!("You must provide 0 or 1 arguments to RustyScheme: {}", args)
     }
 }
 
@@ -56,16 +56,17 @@ fn execute(input: &str, ctx: interpreter::Interpreter) -> Result<String, String>
     Ok(format!("{}", result))
 }
 
-macro_rules! assert_execute(
+macro_rules! assert_execute {
     ($src:expr, $res:expr) => (
         assert_eq!(execute($src, interpreter::new()).unwrap().as_slice(), $res)
     )
-)
-macro_rules! assert_execute_fail(
+}
+
+macro_rules! assert_execute_fail {
     ($src:expr, $res:expr) => (
         assert_eq!(execute($src, interpreter::new()).err().unwrap().as_slice(), $res)
     )
-)
+}
 
 #[test]
 fn test_basic_identities() {
