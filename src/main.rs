@@ -1,9 +1,9 @@
-#![feature(macro_rules)]
-#![feature(globs)]
+#![feature(libc)]
 
-use std::os;
-use std::io::File;
-use std::path::posix::Path;
+use std::env;
+use std::fs::File;
+use std::path::Path;
+use std::io::Read;
 
 mod lexer;
 mod parser;
@@ -23,48 +23,48 @@ macro_rules! try_or_err_to_string {
 
 #[cfg(not(test))]
 fn main() {
-    let raw_args = os::args();
-    let args = raw_args.slice_from(1);
+    let args: Vec<String> = env::args().collect();
     match args.len() {
-        0 => start_repl(),
-        1 => run_file(&args[0]),
-        _ => panic!("You must provide 0 or 1 arguments to RustyScheme: {}", args)
+        1 => start_repl(),
+        2 => run_file(&args[1]),
+        _ => panic!("You must provide 0 or 1 arguments to RustyScheme: {:?}", args)
     }
 }
 
 #[allow(unused_must_use)]
 #[cfg(not(test))]
 fn run_file(filename: &String) {
-    let path = Path::new(filename.as_slice());
+    let path = Path::new(&filename);
     let mut file = File::open(&path).unwrap();
-    let contents = file.read_to_string().unwrap();
+    let mut contents = String::new();
+    file.read_to_string(&mut contents);
     let ctx = interpreter::new();
-    execute(contents.as_slice(), ctx);
+    execute(&contents, ctx);
 }
 
 #[cfg(not(test))]
 fn start_repl() {
     let ctx = interpreter::new();
     println!("\nWelcome to the RustyScheme REPL!");
-    repl::start("> ", (|s| execute(s.as_slice(), ctx.clone())));
+    repl::start("> ", (|s| execute(&s, ctx.clone())));
 }
 
 fn execute(input: &str, ctx: interpreter::Interpreter) -> Result<String, String> {
     let tokens = try_or_err_to_string!(lexer::tokenize(input));
     let ast = try_or_err_to_string!(parser::parse(&tokens));
-    let result = try_or_err_to_string!(ctx.run(ast.as_slice()));
+    let result = try_or_err_to_string!(ctx.run(&ast));
     Ok(format!("{}", result))
 }
 
 macro_rules! assert_execute {
     ($src:expr, $res:expr) => (
-        assert_eq!(execute($src, interpreter::new()).unwrap().as_slice(), $res)
+        assert_eq!(execute($src, interpreter::new()).unwrap(), $res)
     )
 }
 
 macro_rules! assert_execute_fail {
     ($src:expr, $res:expr) => (
-        assert_eq!(execute($src, interpreter::new()).err().unwrap().as_slice(), $res)
+        assert_eq!(execute($src, interpreter::new()).err().unwrap(), $res)
     )
 }
 
@@ -105,7 +105,7 @@ fn test_variable_definition() {
 
 #[test]
 fn test_duplicate_variable_definition() {
-    assert_execute_fail!("(define x 2) (define x 3)", "RuntimeError: Duplicate define: x");
+    assert_execute_fail!("(define x 2) (define x 3)", "RuntimeError: Duplicate define: \"x\"");
 }
 
 #[test]
@@ -115,7 +115,7 @@ fn test_variable_modification() {
 
 #[test]
 fn test_unknown_variable_modification() {
-    assert_execute_fail!("(set! x 3)", "RuntimeError: Can't set! an undefined variable: x");
+    assert_execute_fail!("(set! x 3)", "RuntimeError: Can't set! an undefined variable: \"x\"");
 }
 
 #[test]

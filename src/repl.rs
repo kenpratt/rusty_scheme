@@ -1,5 +1,6 @@
 extern crate libc;
-use std::c_str::CString;
+use std::ffi::CString;
+use std::ffi::CStr;
 
 #[link(name = "readline")]
 extern {
@@ -8,7 +9,8 @@ extern {
 }
 
 fn prompt_for_input(prompt: &str) -> Option<String> {
-    let prompt_c_str = prompt.to_c_str();
+    let prompt_c_str = CString::new(prompt).unwrap();
+
     unsafe {
         // wait for enter/CTRL-C/CTRL-D
         let raw = readline(prompt_c_str.as_ptr());
@@ -17,7 +19,8 @@ fn prompt_for_input(prompt: &str) -> Option<String> {
         }
 
         // parse into String and return
-        let cs = CString::new(raw, true);
+        let buf = CStr::from_ptr(raw).to_bytes();
+        let cs = String::from_utf8(buf.to_vec()).unwrap();
 
         // add to shell history unless it's an empty string
         if cs.len() > 0 {
@@ -25,11 +28,11 @@ fn prompt_for_input(prompt: &str) -> Option<String> {
         }
 
         // return Option<String>
-        cs.as_str().map(|s| s.to_string())
+        Some(cs)
     }
 }
 
-pub fn start(prompt: &str, f: |String| -> Result<String, String>) {
+pub fn start<F: Fn(String) -> Result<String, String>>(prompt: &str, f: F) {
     loop {
         match prompt_for_input(prompt) {
             Some(input) => {
