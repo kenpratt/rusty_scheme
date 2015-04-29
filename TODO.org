@@ -59,6 +59,8 @@
 ** Bytecode + VM interpreter
 ** Bytecode + VM w/ static JIT (generate machine code on first execution of each operation)
 ** Bytecode + VM w/ interpreter & tracing JIT (profile & generate machine code for hot loops)
+** JVM bytecode compiler (or other VM to target)
+** LLVM backend compiler
 ** Plan: do the non-machine code ones first (vanilla interpreter, bytecode + VM interpreter), then try static compilation, then static JITs, then tracing JITs? Or if it's too hard to do a full static compile, just do VM interpreter + tracing JIT, as that's probably the least amount of machine code.
 
 * Resources
