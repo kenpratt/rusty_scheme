@@ -2,3 +2,7 @@
 
 name = "rusty_scheme"
 version = "0.0.1"
+
+[dependencies]
+
+libc = "0.1"
