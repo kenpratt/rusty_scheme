@@ -164,6 +164,7 @@ impl Environment {
             ("and", Function::Native(native_and)),
             ("or", Function::Native(native_or)),
             ("list", Function::Native(native_list)),
+            ("cons", Function::Native(native_cons)),
             ("quote", Function::Native(native_quote)),
             ("quasiquote", Function::Native(native_quasiquote)),
             ("error", Function::Native(native_error)),
@@ -553,6 +554,26 @@ fn native_list(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, R
     let res: Result<Vec<Value>, RuntimeError> = args.iter().map(|n| evaluate_value(n, env.clone())).collect();
     let elements = try!(res);
     Ok(Value::List(elements))
+}
+
+fn native_cons(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        runtime_error!("Must supply exactly two arguments to cons: {:?}", args);
+    }
+
+    let first = try!(evaluate_value(&args[0], env.clone()));
+    let second = try!(evaluate_value(&args[1], env.clone()));
+    match second {
+        Value::List(elements) => {
+            let mut new_elements = vec![first];
+            // TODO re-write lists to store pointer to old list instead of copying elements?
+            for e in elements.iter() {
+                new_elements.push(e.clone());
+            }
+            return Ok(Value::List(new_elements))
+        }
+        _ => runtime_error!("Second argument to cons must be a list: {:?}", second)
+    }
 }
 
 fn native_quote(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {

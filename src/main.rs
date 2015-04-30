@@ -97,6 +97,13 @@ fn test_list_creation() {
 }
 
 #[test]
+fn test_cons() {
+    assert_execute!("(cons 1 '())", "'(1)");
+    assert_execute!("(cons 1 '(2))", "'(1 2)");
+    assert_execute!("(cons '(1) '(2))", "'((1) 2)");
+}
+
+#[test]
 fn test_variable_definition() {
     assert_execute!("(define x 2) (+ x x x)", "6");
 }
