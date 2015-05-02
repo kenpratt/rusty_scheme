@@ -108,6 +108,8 @@ fn test_variable_definition() {
     assert_execute!("(define x 2) (+ x x x)", "6");
     assert_execute!("(define x 2) ((lambda (x) x) 3)", "3");
     assert_execute!("(define x 2) (let ((x 3)) x)", "3");
+    assert_execute!("(define x 2) ((lambda (x) (define x 4) x) 3)", "4");
+    assert_execute!("(define x 2) (let ((x 3)) (define x 4) x)", "4");
 }
 
 #[test]

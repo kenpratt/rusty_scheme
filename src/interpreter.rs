@@ -318,7 +318,9 @@ fn apply_function(func: &Function, args: &[Value], env: Rc<RefCell<Environment>>
                 try!(proc_env.borrow_mut().define(name.clone(), val));
             }
 
-            Ok(try!(evaluate_values(&body, proc_env)))
+            // evaluate procedure body with new environment with procedure environment as parent
+            let inner_env = Environment::new_child(proc_env);
+            evaluate_values(&body, inner_env)
         }
     }
 }
@@ -456,9 +458,10 @@ fn native_let(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, Ru
         _ => runtime_error!("Unexpected value for expressions in let: {:?}", args)
     };
 
-    // evaluate let statement body with new environment
+    // evaluate let statement body with new environment with let environment as parent
+    let inner_env = Environment::new_child(let_env);
     let body = &args[1..];
-    evaluate_values(body, let_env.clone())
+    evaluate_values(body, inner_env)
 }
 
 fn native_set(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
