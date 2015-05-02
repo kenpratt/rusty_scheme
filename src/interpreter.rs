@@ -235,7 +235,11 @@ impl Environment {
 }
 
 fn evaluate_values(values: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
-    values.iter().fold(Ok(null!()), |_, v| evaluate_value(v, env.clone()))
+    let mut res = null!();
+    for v in values.iter() {
+        res = try!(evaluate_value(v, env.clone()));
+    }
+    Ok(res)
 }
 
 fn evaluate_value(value: &Value, env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {

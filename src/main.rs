@@ -232,6 +232,11 @@ fn test_generated_runtime_error() {
 }
 
 #[test]
+fn test_errors_halt_execution() {
+    assert_execute_fail!("(error \"fail, please\") 5", "RuntimeError: \"fail, please\"");
+}
+
+#[test]
 fn test_unicode_identifiers() {
     assert_execute!("(define ★ 3) (define ♫ 4) (+ ★ ♫)", "7");
 }
