@@ -175,7 +175,7 @@ impl Environment {
             ];
         for item in predefined_functions.iter() {
             let (name, ref func) = *item;
-            env.set(name.to_string(), Value::Procedure(func.clone()));
+            env.define(name.to_string(), Value::Procedure(func.clone())).unwrap();
         }
         Rc::new(RefCell::new(env))
     }
@@ -185,12 +185,31 @@ impl Environment {
         Rc::new(RefCell::new(env))
     }
 
-    fn set(&mut self, key: String, value: Value) {
-        self.values.insert(key, value);
+    // Define a variable at the current level
+    // If key is not defined in the current env, set it
+    // If key is already defined in the current env, return runtime error
+    // (So if key is defined at a higher level, still define it at the current level)
+    fn define(&mut self, key: String, value: Value) -> Result<(), RuntimeError> {
+        if self.values.contains_key(&key) {
+            runtime_error!("Duplicate define: {:?}", key)
+        } else {
+            self.values.insert(key, value);
+            Ok(())
+        }
     }
 
-    fn has(&self, key: &String) -> bool {
-        self.values.contains_key(key)
+    // Set a variable to a value, at any level in the env, or throw a runtime error if it isn't defined at all
+    fn set(&mut self, key: String, value: Value) -> Result<(), RuntimeError>  {
+        if self.values.contains_key(&key) {
+            self.values.insert(key, value);
+            Ok(())
+        } else {
+            // recurse up the environment tree until a value is found or the end is reached
+            match self.parent {
+                Some(ref parent) => parent.borrow_mut().set(key, value),
+                None => runtime_error!("Can't set! an undefined variable: {:?}", key)
+            }
+        }
     }
 
     fn get(&self, key: &String) -> Option<Value> {
@@ -292,7 +311,7 @@ fn apply_function(func: &Function, args: &[Value], env: Rc<RefCell<Environment>>
             let proc_env = Environment::new_child(func_env.clone());
             for (name, arg) in arg_names.iter().zip(args.iter()) {
                 let val = try!(evaluate_value(arg, env.clone()));
-                proc_env.borrow_mut().set(name.clone(), val);
+                try!(proc_env.borrow_mut().define(name.clone(), val));
             }
 
             Ok(try!(evaluate_values(&body, proc_env)))
@@ -362,13 +381,8 @@ fn native_define(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value,
         _ => runtime_error!("Unexpected value for name in define: {:?}", args)
     };
 
-    let already_defined = env.borrow().has(name);
-    if !already_defined {
-        env.borrow_mut().set(name.clone(), val);
-        Ok(null!())
-    } else {
-        runtime_error!("Duplicate define: {:?}", name)
-    }
+    try!(env.borrow_mut().define(name.clone(), val));
+    Ok(null!())
 }
 
 fn native_define_syntax_rule(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
@@ -398,13 +412,8 @@ fn native_define_syntax_rule(args: &[Value], env: Rc<RefCell<Environment>>) -> R
         _ => runtime_error!("Unexpected value for pattern in define-syntax-rule: {:?}", args)
     };
 
-    let already_defined = env.borrow().has(name);
-    if !already_defined {
-        env.borrow_mut().set(name.clone(), val);
-        Ok(null!())
-    } else {
-        runtime_error!("Duplicate define: {:?}", name)
-    }
+    try!(env.borrow_mut().define(name.clone(), val));
+    Ok(null!())
 }
 
 fn native_begin(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
@@ -434,7 +443,7 @@ fn native_let(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, Ru
                             _ => runtime_error!("Unexpected value for name in set!: {:?}", args)
                         };
                         let val = try!(evaluate_value(&entry[1], env.clone()));
-                        let_env.borrow_mut().set(name.clone(), val);
+                        try!(let_env.borrow_mut().define(name.clone(), val));
                     },
                     _ => runtime_error!("Unexpected value inside expression in let: {:?}", i)
                 }
@@ -456,14 +465,9 @@ fn native_set(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, Ru
         Value::Symbol(ref x) => x,
         _ => runtime_error!("Unexpected value for name in set!: {:?}", args)
     };
-    let already_defined = env.borrow().has(name);
-    if already_defined {
-        let val = try!(evaluate_value(&args[1], env.clone()));
-        env.borrow_mut().set(name.clone(), val);
-        Ok(null!())
-    } else {
-        runtime_error!("Can't set! an undefined variable: {:?}", name)
-    }
+    let val = try!(evaluate_value(&args[1], env.clone()));
+    try!(env.borrow_mut().set(name.clone(), val));
+    Ok(null!())
 }
 
 fn native_lambda(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {

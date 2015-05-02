@@ -106,16 +106,22 @@ fn test_cons() {
 #[test]
 fn test_variable_definition() {
     assert_execute!("(define x 2) (+ x x x)", "6");
+    assert_execute!("(define x 2) ((lambda (x) x) 3)", "3");
+    assert_execute!("(define x 2) (let ((x 3)) x)", "3");
 }
 
 #[test]
 fn test_duplicate_variable_definition() {
     assert_execute_fail!("(define x 2) (define x 3)", "RuntimeError: Duplicate define: \"x\"");
+    assert_execute_fail!("((lambda () (define x 2) (define x 3)))", "RuntimeError: Duplicate define: \"x\"");
+    assert_execute_fail!("(let ((y 2)) (define x 2) (define x 3))", "RuntimeError: Duplicate define: \"x\"");
 }
 
 #[test]
 fn test_variable_modification() {
     assert_execute!("(define x 2) (set! x 3) (+ x x x)", "9");
+    assert_execute!("(define x 2) ((lambda () (set! x 3))) x", "3");
+    assert_execute!("(define x 2) (let ((y 2)) (set! x 3)) x", "3");
 }
 
 #[test]
