@@ -331,7 +331,7 @@ fn expand_macro(arg_names: Vec<String>, body: Vec<Value>, args: &[Value], env: R
         substitutions.insert(name.clone(), arg.clone());
     }
     let expanded = try!(expand_macro_substitute_values(&body, substitutions));
-    Ok(try!(evaluate_values(&expanded, env)))
+    evaluate_values(&expanded, env)
 }
 
 fn expand_macro_substitute_values(values: &[Value], substitutions: HashMap<String,Value>) -> Result<Vec<Value>, RuntimeError> {
