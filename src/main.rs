@@ -5,7 +5,8 @@ use std::io::Read;
 
 mod lexer;
 mod parser;
-mod interpreter;
+mod ast_walk_interpreter;
+mod cps_interpreter;
 
 #[cfg(not(test))]
 mod repl;
@@ -36,33 +37,43 @@ fn run_file(filename: &String) {
     let mut file = File::open(&path).unwrap();
     let mut contents = String::new();
     file.read_to_string(&mut contents);
-    let ctx = interpreter::new();
-    execute(&contents, ctx);
+    let ctx = cps_interpreter::new().unwrap();
+    execute_cps(&contents, ctx);
 }
 
 #[cfg(not(test))]
 fn start_repl() {
-    let ctx = interpreter::new();
     println!("\nWelcome to the RustyScheme REPL!");
-    repl::start("> ", (|s| execute(&s, ctx.clone())));
+    repl::start("> ", (|s| execute_cps(&s, cps_interpreter::new().unwrap())));
 }
 
-fn execute(input: &str, ctx: interpreter::Interpreter) -> Result<String, String> {
+fn parse(input: &str) -> Result<Vec<parser::Node>, String> {
     let tokens = try_or_err_to_string!(lexer::tokenize(input));
     let ast = try_or_err_to_string!(parser::parse(&tokens));
-    let result = try_or_err_to_string!(ctx.run(&ast));
+    Ok(ast)
+}
+
+fn execute_ast_walk(input: &str, ctx: ast_walk_interpreter::Interpreter) -> Result<String, String> {
+    let result = try_or_err_to_string!(ctx.run(&try!(parse(input))));
+    Ok(format!("{}", result))
+}
+
+fn execute_cps(input: &str, ctx: cps_interpreter::Interpreter) -> Result<String, String> {
+    let result = try_or_err_to_string!(ctx.run(&try!(parse(input))));
     Ok(format!("{}", result))
 }
 
 macro_rules! assert_execute {
     ($src:expr, $res:expr) => (
-        assert_eq!(execute($src, interpreter::new()).unwrap(), $res)
+        assert_eq!(execute_ast_walk($src, ast_walk_interpreter::new()).unwrap(), $res);
+        assert_eq!(execute_cps($src, cps_interpreter::new().unwrap()).unwrap(), $res);
     )
 }
 
 macro_rules! assert_execute_fail {
     ($src:expr, $res:expr) => (
-        assert_eq!(execute($src, interpreter::new()).err().unwrap(), $res)
+        assert_eq!(execute_ast_walk($src, ast_walk_interpreter::new()).err().unwrap(), $res);
+        assert_eq!(execute_cps($src, cps_interpreter::new().unwrap()).err().unwrap(), $res);
     )
 }
 
@@ -206,12 +217,13 @@ fn test_quasiquoting() {
     assert_execute!("(quasiquote (1 2))", "'(1 2)");
     assert_execute!("(quasiquote (2 (unquote (+ 1 2)) 4))", "'(2 3 4)");
     assert_execute!("`(2 ,(+ 1 2) 4)", "'(2 3 4)");
+    assert_execute!("(define formula '(+ x y)) `((lambda (x y) ,formula) 2 3)", "'((lambda (x y) (+ x y)) 2 3)");
 }
 
 #[test]
 fn test_apply() {
     assert_execute!("(apply + '(1 2 3))", "6");
-    assert_execute!("(define foo (lambda (f) (lambda (x y) (f (f x y) y)))) (apply (apply foo '(+)) '(5 3))", "11");
+    assert_execute!("(define foo (lambda (f) (lambda (x y) (f (f x y) y)))) (apply (apply foo (list +)) '(5 3))", "11");
 }
 
 #[test]

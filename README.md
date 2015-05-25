@@ -6,15 +6,21 @@ A toy Scheme interpreter written in Rust, loosely based on the [R5RS Specificati
 It supports a small number of standard library functions, as well as:
 
 * Function and variable definition
-* Quote
-* Quasiquote/unquote
+* Quote, Quasiquote/unquote
 * Apply & eval
 * Macros (not hygenic yet)
 * Let expressions
+* Tail-call optimization
+* Continuations, [Call-with-current-continuation](http://en.wikipedia.org/wiki/Call-with-current-continuation)
 * Unicode
-* REPL with history
+* REPL, with history
 
-RustyScheme currently uses the Rust stack and heap, implementing the standard library directly in Rust. I intend to refactor the interpret to manage its own stack and instruction pointer in order to support [call-with-current-continuation](http://en.wikipedia.org/wiki/Call-with-current-continuation), and may also develop a bytecode/VM version for comparison.
+There are two versions of the interpreter:
+
+* A straight-forward AST-walking interpreter, whicth uses the Rust stack and heap, and uses vectors to represent Scheme lists.
+* A [continuation-passing style](http://en.wikipedia.org/wiki/Continuation-passing_style) interpreter, which supports tail-call optimization and continuations, uses the Rust stack and heap, and uses a linked list to represent Scheme lists.
+
+In the future, I may develop an interpreter that manages its own stack and/or heap, and possible a bytecode VM version as well for comparison.
 
 Requirements
 ------------
