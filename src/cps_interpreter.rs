@@ -58,18 +58,6 @@ enum Value {
     Continuation(Box<Continuation>),
 }
 
-impl fmt::Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.to_string())
-    }
-}
-
-impl fmt::Debug for Value {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.to_raw_string())
-    }
-}
-
 impl Value {
     fn from_vec(vec: Vec<Value>) -> Value {
         List::from_vec(vec).to_value()
@@ -119,26 +107,30 @@ impl Value {
             _ => runtime_error!("Expected a list value: {:?}", self)
         }
     }
+}
 
-    fn to_string(&self) -> String {
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Value::Symbol(_) => format!("'{}", self.to_raw_string()),
-            Value::List(_) => format!("'{}", self.to_raw_string()),
-            _ => self.to_raw_string()
+            Value::Symbol(ref val) => write!(f, "{}", val),
+            Value::Integer(val)    => write!(f, "{}", val),
+            Value::Boolean(val)    => write!(f, "#{}", if val { "t" } else { "f" }),
+            Value::String(ref val) => write!(f, "{}", val),
+            Value::List(ref list)  => write!(f, "{}", list),
+            Value::Procedure(_)    => write!(f, "#<procedure>"),
+            Value::SpecialForm(_)  => write!(f, "#<special_form>"),
+            Value::Continuation(_) => write!(f, "#<continuation>"),
+            Value::Macro(_,_)      => write!(f, "#<macro>"),
         }
     }
+}
 
-    fn to_raw_string(&self) -> String {
+impl fmt::Debug for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Value::Symbol(ref val) => format!("{}", val),
-            Value::Integer(val) => format!("{}", val),
-            Value::Boolean(val) => format!("#{}", if val { "t" } else { "f" }),
-            Value::String(ref val) => format!("\"{}\"", val),
-            Value::List(ref list) => format!("{}", list),
-            Value::Procedure(_) => format!("#<procedure>"),
-            Value::SpecialForm(_) => format!("#<special_form>"),
-            Value::Continuation(_) => format!("#<continuation>"),
-            Value::Macro(_,_) => format!("#<macro>"),
+            Value::String(ref val) => write!(f, "\"{}\"", val),
+            Value::List(ref list)  => write!(f, "{:?}", list),
+            _                      => write!(f, "{}", self)
         }
     }
 }
@@ -309,11 +301,6 @@ impl List {
         }
         out
     }
-
-    fn to_string(&self) -> String {
-        let strs: Vec<String> = self.clone().into_iter().map(|v| format!("{:?}", v)).collect();
-        "(".to_string() + &strs.connect(" ") + ")"
-    }
 }
 
 impl iter::IntoIterator for List {
@@ -327,13 +314,15 @@ impl iter::IntoIterator for List {
 
 impl fmt::Display for List {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        let strs: Vec<String> = self.clone().into_iter().map(|v| format!("{}", v)).collect();
+        write!(f, "({})", &strs.connect(" "))
     }
 }
 
 impl fmt::Debug for List {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        let strs: Vec<String> = self.clone().into_iter().map(|v| format!("{:?}", v)).collect();
+        write!(f, "({})", &strs.connect(" "))
     }
 }
 
@@ -672,7 +661,7 @@ fn process(exprs: List, env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeE
                             _ => {
                                 match env.borrow().get(s) {
                                     Some(v) => v,
-                                    None => runtime_error!("Identifier not found: '{}", s)
+                                    None => runtime_error!("Identifier not found: {}", s)
                                 }
                             }
                         };
@@ -738,6 +727,9 @@ impl Environment {
         try!(env.define("cons".to_string(), Value::Procedure(Function::Native("cons"))));
         try!(env.define("error".to_string(), Value::Procedure(Function::Native("error"))));
         try!(env.define("write".to_string(), Value::Procedure(Function::Native("write"))));
+        try!(env.define("display".to_string(), Value::Procedure(Function::Native("display"))));
+        try!(env.define("displayln".to_string(), Value::Procedure(Function::Native("displayln"))));
+        try!(env.define("print".to_string(), Value::Procedure(Function::Native("print"))));
         try!(env.define("newline".to_string(), Value::Procedure(Function::Native("newline"))));
         Ok(Rc::new(RefCell::new(env)))
     }
@@ -840,8 +832,35 @@ fn primitive(f: &'static str, args: List) -> Result<Value, RuntimeError> {
             if args.len() != 1 {
                 runtime_error!("Must supply exactly one argument to write: {:?}", args);
             }
-            let msg = try!(args.unpack1());
-            print!("{}", msg);
+            let val = try!(args.unpack1());
+            print!("{:?}", val);
+            Ok(null!())
+        },
+        "display" => {
+            if args.len() != 1 {
+                runtime_error!("Must supply exactly one argument to display: {:?}", args);
+            }
+            let val = try!(args.unpack1());
+            print!("{}", val);
+            Ok(null!())
+        },
+        "displayln" => {
+            if args.len() != 1 {
+                runtime_error!("Must supply exactly one argument to displayln: {:?}", args);
+            }
+            let val = try!(args.unpack1());
+            println!("{}", val);
+            Ok(null!())
+        },
+        "print" => {
+            if args.len() != 1 {
+                runtime_error!("Must supply exactly one argument to print: {:?}", args);
+            }
+            let val = try!(args.unpack1());
+            match val {
+                Value::Symbol(_) | Value::List(_) => print!("'{:?}", val),
+                _ => print!("{:?}", val)
+            }
             Ok(null!())
         },
         "newline" => {

@@ -68,12 +68,12 @@ fn parse(input: &str) -> Result<Vec<parser::Node>, String> {
 #[cfg(test)]
 fn execute_ast_walk(input: &str, ctx: ast_walk_interpreter::Interpreter) -> Result<String, String> {
     let result = try_or_err_to_string!(ctx.run(&try!(parse(input))));
-    Ok(format!("{}", result))
+    Ok(format!("{:?}", result))
 }
 
 fn execute_cps(input: &str, ctx: cps_interpreter::Interpreter) -> Result<String, String> {
     let result = try_or_err_to_string!(ctx.run(&try!(parse(input))));
-    Ok(format!("{}", result))
+    Ok(format!("{:?}", result))
 }
 
 macro_rules! assert_execute {
@@ -115,16 +115,16 @@ fn test_nested_expressions() {
 
 #[test]
 fn test_list_creation() {
-    assert_execute!("(list)", "'()");
-    assert_execute!("(list 1 2 3)", "'(1 2 3)");
-    assert_execute!("(list 1 (list 2 3) (list 4) (list))", "'(1 (2 3) (4) ())");
+    assert_execute!("(list)", "()");
+    assert_execute!("(list 1 2 3)", "(1 2 3)");
+    assert_execute!("(list 1 (list 2 3) (list 4) (list))", "(1 (2 3) (4) ())");
 }
 
 #[test]
 fn test_cons() {
-    assert_execute!("(cons 1 '())", "'(1)");
-    assert_execute!("(cons 1 '(2))", "'(1 2)");
-    assert_execute!("(cons '(1) '(2))", "'((1) 2)");
+    assert_execute!("(cons 1 '())", "(1)");
+    assert_execute!("(cons 1 '(2))", "(1 2)");
+    assert_execute!("(cons '(1) '(2))", "((1) 2)");
 }
 
 #[test]
@@ -214,23 +214,23 @@ fn test_boolean_operators() {
 fn test_quoting() {
     assert_execute!("(quote #t)", "#t");
     assert_execute!("(quote 1)", "1");
-    assert_execute!("(quote sym)", "'sym");
+    assert_execute!("(quote sym)", "sym");
     assert_execute!("(quote \"hi\")", "\"hi\"");
-    assert_execute!("(quote (1 2))", "'(1 2)");
-    assert_execute!("(quote (a b))", "'(a b)");
-    assert_execute!("(quote (a b (c (d) e ())))", "'(a b (c (d) e ()))");
-    assert_execute!("(quote (a (quote b)))", "'(a (quote b))");
-    assert_execute!("'(1 2)", "'(1 2)");
-    assert_execute!("'(a b (c (d) e ()))", "'(a b (c (d) e ()))");
-    assert_execute!("'(1 '2)", "'(1 (quote 2))");
+    assert_execute!("(quote (1 2))", "(1 2)");
+    assert_execute!("(quote (a b))", "(a b)");
+    assert_execute!("(quote (a b (c (d) e ())))", "(a b (c (d) e ()))");
+    assert_execute!("(quote (a (quote b)))", "(a (quote b))");
+    assert_execute!("'(1 2)", "(1 2)");
+    assert_execute!("'(a b (c (d) e ()))", "(a b (c (d) e ()))");
+    assert_execute!("'(1 '2)", "(1 (quote 2))");
 }
 
 #[test]
 fn test_quasiquoting() {
-    assert_execute!("(quasiquote (1 2))", "'(1 2)");
-    assert_execute!("(quasiquote (2 (unquote (+ 1 2)) 4))", "'(2 3 4)");
-    assert_execute!("`(2 ,(+ 1 2) 4)", "'(2 3 4)");
-    assert_execute!("(define formula '(+ x y)) `((lambda (x y) ,formula) 2 3)", "'((lambda (x y) (+ x y)) 2 3)");
+    assert_execute!("(quasiquote (1 2))", "(1 2)");
+    assert_execute!("(quasiquote (2 (unquote (+ 1 2)) 4))", "(2 3 4)");
+    assert_execute!("`(2 ,(+ 1 2) 4)", "(2 3 4)");
+    assert_execute!("(define formula '(+ x y)) `((lambda (x y) ,formula) 2 3)", "((lambda (x y) (+ x y)) 2 3)");
 }
 
 #[test]
@@ -243,7 +243,7 @@ fn test_apply() {
 fn test_eval() {
     assert_execute!("(eval '(+ 1 2 3))", "6");
     assert_execute!("(define eval-formula (lambda (formula) (eval `((lambda (x y) ,formula) 2 3)))) (eval-formula '(+ (- y x) y))", "4");
-    assert_execute_fail!("(define bad-eval-formula (lambda (formula) ((lambda (x y) (eval formula)) 2 3))) (bad-eval-formula '(+ x y))", "RuntimeError: Identifier not found: 'x");
+    assert_execute_fail!("(define bad-eval-formula (lambda (formula) ((lambda (x y) (eval formula)) 2 3))) (bad-eval-formula '(+ x y))", "RuntimeError: Identifier not found: x");
 }
 
 #[test]
@@ -272,7 +272,7 @@ fn test_unicode_identifiers() {
 fn test_macros() {
     assert_execute!("(define-syntax-rule (incr x) (set! x (+ x 1))) (define a 1) (incr a) a", "2");
     assert_execute!("(define-syntax-rule (incr x) (set! x (+ x 1))) (define x 1) (incr x) x", "2");
-    assert_execute!("(define-syntax-rule (incr x) (set! x (+ x 1))) (define-syntax-rule (foo x y z) (if x (incr y) (incr z))) (define a #t) (define b 10) (define c 20) (foo a b c) (set! a #f) (foo a b c) (list b c)", "'(11 21)");
+    assert_execute!("(define-syntax-rule (incr x) (set! x (+ x 1))) (define-syntax-rule (foo x y z) (if x (incr y) (incr z))) (define a #t) (define b 10) (define c 20) (foo a b c) (set! a #f) (foo a b c) (list b c)", "(11 21)");
     assert_execute!("(define-syntax-rule (foo x) (if x (+ (foo #f) 3) 10)) (foo #t)", "13");
     assert_execute!("(define-syntax-rule (testy a b c) (if a b c)) (testy #t 1 (error \"test\")) (testy #f (error \"test\") 2)", "2");
 }

@@ -47,17 +47,6 @@ pub enum Function {
 // type signature for all native functions
 type ValueOperation = fn(&[Value], Rc<RefCell<Environment>>) -> Result<Value, RuntimeError>;
 
-impl fmt::Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.to_string())
-    }
-}
-impl fmt::Debug for Value {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.to_string())
-    }
-}
-
 impl Value {
     fn from_nodes(nodes: &[Node]) -> Vec<Value> {
         nodes.iter().map(Value::from_node).collect()
@@ -72,36 +61,34 @@ impl Value {
             Node::List(ref nodes) => Value::List(Value::from_nodes(&nodes))
         }
     }
+}
 
-    fn to_string(&self) -> String {
-        match self {
-            &Value::Symbol(_) => format!("'{}", self.to_raw_str()),
-            &Value::List(_) => format!("'{}", self.to_raw_str()),
-            _ => self.to_raw_str()
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Value::Symbol(ref val) => write!(f, "{}", val),
+            Value::Integer(val)    => write!(f, "{}", val),
+            Value::Boolean(val)    => write!(f, "#{}", if val { "t" } else { "f" }),
+            Value::String(ref val) => write!(f, "{}", val),
+            Value::List(ref list)  => {
+                let strs: Vec<String> = list.iter().map(|v| format!("{}", v)).collect();
+                write!(f, "({})", &strs.connect(" "))
+            },
+            Value::Procedure(_)   => write!(f, "#<procedure>"),
+            Value::Macro(_,_)     => write!(f, "#<macro>"),
         }
     }
+}
 
-    fn to_raw_str(&self) -> String {
+impl fmt::Debug for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Value::Symbol(ref val) => format!("{}", val),
-            Value::Integer(val) => format!("{}", val),
-            Value::Boolean(val) => format!("#{}", if val { "t" } else { "f" }),
-            Value::String(ref val) => format!("\"{}\"", val),
-            Value::List(ref val) => {
-                let mut s = String::new();
-                let mut first = true;
-                for n in val.iter() {
-                    if first {
-                        first = false;
-                    } else {
-                        s.push_str(" ");
-                    }
-                    s.push_str(&n.to_raw_str());
-                }
-                format!("({})", s)
+            Value::String(ref val) => write!(f, "\"{}\"", val),
+            Value::List(ref list)  => {
+                let strs: Vec<String> = list.iter().map(|v| format!("{:?}", v)).collect();
+                write!(f, "({})", &strs.connect(" "))
             },
-            Value::Procedure(_) => format!("#<procedure>"),
-            Value::Macro(_,_) => format!("#<macro>"),
+            _                      => write!(f, "{}", self)
         }
     }
 }
@@ -171,6 +158,9 @@ impl Environment {
             ("apply", Function::Native(native_apply)),
             ("eval", Function::Native(native_eval)),
             ("write", Function::Native(native_write)),
+            ("display", Function::Native(native_display)),
+            ("displayln", Function::Native(native_displayln)),
+            ("print", Function::Native(native_print)),
             ("newline", Function::Native(native_newline)),
             ];
         for item in predefined_functions.iter() {
@@ -640,7 +630,40 @@ fn native_write(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, 
     }
 
     let val = try!(evaluate_value(&args[0], env.clone()));
+    print!("{:?}", val);
+    Ok(null!())
+}
+
+fn native_display(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        runtime_error!("Must supply exactly one argument to display: {:?}", args);
+    }
+
+    let val = try!(evaluate_value(&args[0], env.clone()));
     print!("{}", val);
+    Ok(null!())
+}
+
+fn native_displayln(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        runtime_error!("Must supply exactly one argument to displayln: {:?}", args);
+    }
+
+    let val = try!(evaluate_value(&args[0], env.clone()));
+    println!("{}", val);
+    Ok(null!())
+}
+
+fn native_print(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        runtime_error!("Must supply exactly one argument to print: {:?}", args);
+    }
+
+    let val = try!(evaluate_value(&args[0], env.clone()));
+    match val {
+        Value::Symbol(_) | Value::List(_) => print!("'{:?}", val),
+        _ => print!("{:?}", val)
+    }
     Ok(null!())
 }
 
