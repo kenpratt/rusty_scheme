@@ -87,6 +87,22 @@ impl<'a> Lexer<'a> {
                         _ if c.is_whitespace() => {
                             self.advance();
                         },
+                        ';' => {
+                            // comment, advance until newline
+                            self.advance();
+                            loop {
+                                match self.current() {
+                                    Some(c) if c == '\n' => {
+                                        self.advance();
+                                        break
+                                    }
+                                    Some(_) => {
+                                        self.advance();
+                                    },
+                                    None => break
+                                }
+                            }
+                        },
                         '(' => {
                             self.tokens.push(Token::OpenParen);
                             self.advance();
@@ -140,7 +156,7 @@ impl<'a> Lexer<'a> {
                             self.tokens.push(Token::String(val));
                             try!(self.parse_delimiter());
                         },
-                        '[' | ']' | '{' | '}' | ';' | '|' | '\\' => {
+                        '[' | ']' | '{' | '}' | '|' | '\\' => {
                             syntax_error!(self, "Unexpected character: {}", c);
                         },
                         _ => {

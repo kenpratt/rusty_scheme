@@ -281,3 +281,8 @@ fn test_macros() {
 fn test_multiline() {
     assert_execute!("(define x 3)\n(define y 4)\n(+ x y)", "7");
 }
+
+#[test]
+fn test_comment() {
+    assert_execute!("(define x 3)\n(define y 4)\n;(set! y 5)\n(+ x y); (+ x y)", "7");
+}
