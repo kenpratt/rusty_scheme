@@ -266,3 +266,8 @@ fn test_macros() {
     assert_execute!("(define-syntax-rule (foo x) (if x (+ (foo #f) 3) 10)) (foo #t)", "13");
     assert_execute!("(define-syntax-rule (testy a b c) (if a b c)) (testy #t 1 (error \"test\")) (testy #f (error \"test\") 2)", "2");
 }
+
+#[test]
+fn test_multiline() {
+    assert_execute!("(define x 3)\n(define y 4)\n(+ x y)", "7");
+}
