@@ -1,8 +1,7 @@
 [package]
-
 name = "rusty_scheme"
-version = "0.0.1"
+version = "0.0.2"
 
 [dependencies]
-
+getopts = "0.2"
 libc = "0.1"

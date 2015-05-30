@@ -1,92 +1,68 @@
+extern crate getopts;
+
+#[cfg(not(test))]
+use getopts::Options;
+
 #[cfg(not(test))]
 use std::env;
 
-#[cfg(not(test))]
-use std::fs::File;
-
-#[cfg(not(test))]
-use std::path::Path;
-
-#[cfg(not(test))]
-use std::io::Read;
-
 mod lexer;
 mod parser;
-
-#[cfg(test)]
+mod interpreter;
 mod ast_walk_interpreter;
-
 mod cps_interpreter;
 
 #[cfg(not(test))]
 mod repl;
 
-macro_rules! try_or_err_to_string {
-    ($inp:expr) => (
-        match $inp {
-            Ok(v) => v,
-            Err(e) => return Err(e.to_string())
-        }
-    )
-}
-
 #[cfg(not(test))]
 fn main() {
+    // parse command-line arguments & options
     let args: Vec<String> = env::args().collect();
-    match args.len() {
-        1 => start_repl(),
-        2 => run_file(&args[1]),
-        _ => panic!("You must provide 0 or 1 arguments to RustyScheme: {:?}", args)
+    let program = &args[0];
+    let mut opts = Options::new();
+    opts.optopt("t", "type", "set interpreter type", "ast_walk/cps");
+    opts.optflag("h", "help", "print this help menu");
+    let matches = match opts.parse(&args[1..]) {
+        Ok(m) => { m }
+        Err(f) => { panic!(f.to_string()) }
+    };
+
+    if matches.opt_present("h") {
+        print_usage(&program, opts);
+        return;
+    }
+
+    let interpreter = match matches.opt_str("t") {
+        Some(t) => interpreter::new(&t),
+        None => interpreter::new("cps")
+    };
+
+    let rest = matches.free;
+    match rest.len() {
+        0 => interpreter.start_repl(),
+        1 => interpreter.run_file(&rest[0]),
+        _ => panic!("You must provide 0 or 1 arguments to RustyScheme: {:?}", rest)
     }
 }
 
 #[cfg(not(test))]
-fn run_file(filename: &String) {
-    let path = Path::new(&filename);
-    let mut file = File::open(&path).unwrap();
-    let mut contents = String::new();
-    file.read_to_string(&mut contents).unwrap();
-    let ctx = cps_interpreter::new().unwrap();
-    match execute_cps(&contents, ctx) {
-        Ok(_) => {},
-        Err(e) => println!("{}", e),
-    }
-}
-
-#[cfg(not(test))]
-fn start_repl() {
-    println!("\nWelcome to the RustyScheme REPL!");
-    repl::start("> ", (|s| execute_cps(&s, cps_interpreter::new().unwrap())));
-}
-
-fn parse(input: &str) -> Result<Vec<parser::Node>, String> {
-    let tokens = try_or_err_to_string!(lexer::tokenize(input));
-    let ast = try_or_err_to_string!(parser::parse(&tokens));
-    Ok(ast)
-}
-
-#[cfg(test)]
-fn execute_ast_walk(input: &str, ctx: ast_walk_interpreter::Interpreter) -> Result<String, String> {
-    let result = try_or_err_to_string!(ctx.run(&try!(parse(input))));
-    Ok(format!("{:?}", result))
-}
-
-fn execute_cps(input: &str, ctx: cps_interpreter::Interpreter) -> Result<String, String> {
-    let result = try_or_err_to_string!(ctx.run(&try!(parse(input))));
-    Ok(format!("{:?}", result))
+fn print_usage(program: &str, opts: Options) {
+    let brief = format!("Usage: {} [options]", program);
+    print!("{}", opts.usage(&brief));
 }
 
 macro_rules! assert_execute {
     ($src:expr, $res:expr) => (
-        assert_eq!(execute_ast_walk($src, ast_walk_interpreter::new()).unwrap(), $res);
-        assert_eq!(execute_cps($src, cps_interpreter::new().unwrap()).unwrap(), $res);
+        assert_eq!(interpreter::new("ast_walk").execute($src).unwrap(), $res);
+        assert_eq!(interpreter::new("cps").execute($src).unwrap(), $res);
     )
 }
 
 macro_rules! assert_execute_fail {
     ($src:expr, $res:expr) => (
-        assert_eq!(execute_ast_walk($src, ast_walk_interpreter::new()).err().unwrap(), $res);
-        assert_eq!(execute_cps($src, cps_interpreter::new().unwrap()).err().unwrap(), $res);
+        assert_eq!(interpreter::new("ast_walk").execute($src).err().unwrap(), $res);
+        assert_eq!(interpreter::new("cps").execute($src).err().unwrap(), $res);
     )
 }
 
