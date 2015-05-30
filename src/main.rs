@@ -38,7 +38,10 @@ fn run_file(filename: &String) {
     let mut contents = String::new();
     file.read_to_string(&mut contents);
     let ctx = cps_interpreter::new().unwrap();
-    execute_cps(&contents, ctx);
+    match execute_cps(&contents, ctx) {
+        Ok(_) => {},
+        Err(e) => println!("{}", e),
+    };
 }
 
 #[cfg(not(test))]
