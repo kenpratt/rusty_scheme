@@ -1,11 +1,21 @@
+#[cfg(not(test))]
 use std::env;
+
+#[cfg(not(test))]
 use std::fs::File;
+
+#[cfg(not(test))]
 use std::path::Path;
+
+#[cfg(not(test))]
 use std::io::Read;
 
 mod lexer;
 mod parser;
+
+#[cfg(test)]
 mod ast_walk_interpreter;
+
 mod cps_interpreter;
 
 #[cfg(not(test))]
@@ -30,18 +40,17 @@ fn main() {
     }
 }
 
-#[allow(unused_must_use)]
 #[cfg(not(test))]
 fn run_file(filename: &String) {
     let path = Path::new(&filename);
     let mut file = File::open(&path).unwrap();
     let mut contents = String::new();
-    file.read_to_string(&mut contents);
+    file.read_to_string(&mut contents).unwrap();
     let ctx = cps_interpreter::new().unwrap();
     match execute_cps(&contents, ctx) {
         Ok(_) => {},
         Err(e) => println!("{}", e),
-    };
+    }
 }
 
 #[cfg(not(test))]
@@ -56,6 +65,7 @@ fn parse(input: &str) -> Result<Vec<parser::Node>, String> {
     Ok(ast)
 }
 
+#[cfg(test)]
 fn execute_ast_walk(input: &str, ctx: ast_walk_interpreter::Interpreter) -> Result<String, String> {
     let result = try_or_err_to_string!(ctx.run(&try!(parse(input))));
     Ok(format!("{}", result))

@@ -99,19 +99,19 @@ impl Value {
         }
     }
 
-    fn as_boolean(self) -> Result<bool, RuntimeError> {
-        match self {
-            Value::Boolean(b) => Ok(b),
-            _ => runtime_error!("Expected a boolean value: {:?}", self)
-        }
-    }
+    // fn as_boolean(self) -> Result<bool, RuntimeError> {
+    //     match self {
+    //         Value::Boolean(b) => Ok(b),
+    //         _ => runtime_error!("Expected a boolean value: {:?}", self)
+    //     }
+    // }
 
-    fn as_string(self) -> Result<String, RuntimeError> {
-        match self {
-            Value::String(s) => Ok(s),
-            _ => runtime_error!("Expected a string value: {:?}", self)
-        }
-    }
+    // fn as_string(self) -> Result<String, RuntimeError> {
+    //     match self {
+    //         Value::String(s) => Ok(s),
+    //         _ => runtime_error!("Expected a string value: {:?}", self)
+    //     }
+    // }
 
     fn as_list(self) -> Result<List, RuntimeError> {
         match self {
@@ -857,6 +857,7 @@ fn primitive(f: &'static str, args: List) -> Result<Value, RuntimeError> {
     }
 }
 
+#[cfg(test)]
 fn exec(list: List) -> Result<Value, RuntimeError> {
     process(list, try!(Environment::new_root()))
 }
