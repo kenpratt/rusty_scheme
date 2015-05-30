@@ -723,8 +723,12 @@ impl Environment {
         try!(env.define("+".to_string(), Value::Procedure(Function::Native("+"))));
         try!(env.define("-".to_string(), Value::Procedure(Function::Native("-"))));
         try!(env.define(">".to_string(), Value::Procedure(Function::Native(">"))));
+        try!(env.define("null?".to_string(), Value::Procedure(Function::Native("null?"))));
         try!(env.define("list".to_string(), Value::Procedure(Function::Native("list"))));
+        try!(env.define("car".to_string(), Value::Procedure(Function::Native("car"))));
+        try!(env.define("cdr".to_string(), Value::Procedure(Function::Native("cdr"))));
         try!(env.define("cons".to_string(), Value::Procedure(Function::Native("cons"))));
+        try!(env.define("append".to_string(), Value::Procedure(Function::Native("append"))));
         try!(env.define("error".to_string(), Value::Procedure(Function::Native("error"))));
         try!(env.define("write".to_string(), Value::Procedure(Function::Native("write"))));
         try!(env.define("display".to_string(), Value::Procedure(Function::Native("display"))));
@@ -811,15 +815,58 @@ fn primitive(f: &'static str, args: List) -> Result<Value, RuntimeError> {
             let (l, r) = try!(args.unpack2());
             Ok(Value::Boolean(try!(l.as_integer()) > try!(r.as_integer())))
         },
+        "null?" => {
+            if args.len() != 1 {
+                runtime_error!("Must supply exactly one argument to null?: {:?}", args);
+            }
+            let v = try!(args.unpack1());
+            match v {
+                Value::List(l) => Ok(Value::Boolean(l.is_empty())),
+                _ => Ok(Value::Boolean(false))
+            }
+        },
         "list" => {
             Ok(args.to_value())
         },
+        "car" => {
+            if args.len() != 1 {
+                runtime_error!("Must supply exactly two arguments to car: {:?}", args);
+            }
+            let l = try!(try!(args.unpack1()).as_list());
+            match l.shift() {
+                Some((car, _)) => Ok(car),
+                None => runtime_error!("Can't run car on an empty list")
+            }
+        },
+        "cdr" => {
+            if args.len() != 1 {
+                runtime_error!("Must supply exactly two arguments to cdr: {:?}", args);
+            }
+            let l = try!(try!(args.unpack1()).as_list());
+            match l.shift() {
+                Some((_, cdr)) => Ok(cdr.to_value()),
+                None => runtime_error!("Can't run cdr on an empty list")
+            }
+        },
         "cons" => {
             if args.len() != 2 {
-                runtime_error!("Must supply exactly two arguments to >: {:?}", args);
+                runtime_error!("Must supply exactly two arguments to cons: {:?}", args);
             }
             let (elem, list) = try!(args.unpack2());
             Ok(try!(list.as_list()).unshift(elem).to_value())
+        },
+        "append" => {
+            if args.len() != 2 {
+                runtime_error!("Must supply exactly two arguments to append: {:?}", args);
+            }
+            let (list1raw, list2raw) = try!(args.unpack2());
+            let list1 = try!(list1raw.as_list());
+            let mut list2 = try!(list2raw.as_list());
+
+            for elem in list1.reverse() {
+                list2 = list2.unshift(elem)
+            }
+            Ok(list2.to_value())
         },
         "error" => {
             if args.len() != 1 {

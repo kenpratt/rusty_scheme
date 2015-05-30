@@ -150,8 +150,12 @@ impl Environment {
             ("-", Function::Native(native_minus)),
             ("and", Function::Native(native_and)),
             ("or", Function::Native(native_or)),
+            ("null?", Function::Native(native_null)),
             ("list", Function::Native(native_list)),
+            ("car", Function::Native(native_car)),
+            ("cdr", Function::Native(native_cdr)),
             ("cons", Function::Native(native_cons)),
+            ("append", Function::Native(native_append)),
             ("quote", Function::Native(native_quote)),
             ("quasiquote", Function::Native(native_quasiquote)),
             ("error", Function::Native(native_error)),
@@ -551,10 +555,56 @@ fn native_or(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, Run
     Ok(Value::Boolean(false))
 }
 
+fn native_null(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        runtime_error!("Must supply exactly one argument to null?: {:?}", args);
+    }
+    let v = try!(evaluate_value(&args[0], env.clone()));
+    match v {
+        Value::List(l) => Ok(Value::Boolean(l.len() == 0)),
+        _ => Ok(Value::Boolean(false))
+    }
+}
+
 fn native_list(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
     let res: Result<Vec<Value>, RuntimeError> = args.iter().map(|n| evaluate_value(n, env.clone())).collect();
     let elements = try!(res);
     Ok(Value::List(elements))
+}
+
+fn native_car(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        runtime_error!("Must supply exactly one argument to car: {:?}", args);
+    }
+    let v = try!(evaluate_value(&args[0], env.clone()));
+    match v {
+        Value::List(mut l) => {
+            if l.len() > 0 {
+                Ok(l.remove(0))
+            } else {
+                runtime_error!("Can't run car on an empty list")
+            }
+        }
+        _ => runtime_error!("Must supply a list to car")
+    }
+}
+
+fn native_cdr(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        runtime_error!("Must supply exactly one argument to cdr: {:?}", args);
+    }
+    let v = try!(evaluate_value(&args[0], env.clone()));
+    match v {
+        Value::List(mut l) => {
+            if l.len() > 0 {
+                l.remove(0);
+                Ok(Value::List(l))
+            } else {
+                runtime_error!("Can't run cdr on an empty list")
+            }
+        }
+        _ => runtime_error!("Must supply a list to cdr")
+    }
 }
 
 fn native_cons(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
@@ -567,14 +617,34 @@ fn native_cons(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, R
     match second {
         Value::List(elements) => {
             let mut new_elements = vec![first];
-            // TODO re-write lists to store pointer to old list instead of copying elements?
-            for e in elements.iter() {
-                new_elements.push(e.clone());
+            for e in elements.into_iter() {
+                new_elements.push(e);
             }
             return Ok(Value::List(new_elements))
         }
         _ => runtime_error!("Second argument to cons must be a list: {:?}", second)
     }
+}
+
+fn native_append(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        runtime_error!("Must supply exactly two arguments to append: {:?}", args);
+    }
+
+    let first = try!(evaluate_value(&args[0], env.clone()));
+    let second = try!(evaluate_value(&args[1], env.clone()));
+    let mut first_vec = match first {
+        Value::List(elements) => elements,
+        _ => runtime_error!("First argument to append must be a list: {:?}", first)
+    };
+    let second_vec = match second {
+        Value::List(elements) => elements,
+        _ => runtime_error!("Second argument to append must be a list: {:?}", second)
+    };
+    for e in second_vec.into_iter() {
+        first_vec.push(e);
+    }
+    return Ok(Value::List(first_vec))
 }
 
 fn native_quote(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {

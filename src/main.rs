@@ -97,10 +97,48 @@ fn test_list_creation() {
 }
 
 #[test]
+fn test_null() {
+    assert_execute!("(null? '())", "#t");
+    assert_execute!("(null? '(1))", "#f");
+    assert_execute!("(null? '(()))", "#f");
+    assert_execute!("(null? 1)", "#f");
+    assert_execute!("(null? #t)", "#f");
+    assert_execute!("(null? #f)", "#f");
+    assert_execute!("(null? 'a)", "#f");
+    assert_execute!("(null? \"a\")", "#f");
+}
+
+#[test]
 fn test_cons() {
     assert_execute!("(cons 1 '())", "(1)");
     assert_execute!("(cons 1 '(2))", "(1 2)");
     assert_execute!("(cons '(1) '(2))", "((1) 2)");
+}
+
+#[test]
+fn test_car() {
+    assert_execute!("(car '(1))", "1");
+    assert_execute!("(car '(1 2 3))", "1");
+    assert_execute!("(car '((1) (2 3)))", "(1)");
+    assert_execute_fail!("(car '())", "RuntimeError: Can't run car on an empty list");
+}
+
+#[test]
+fn test_cdr() {
+    assert_execute!("(cdr '(1 2))", "(2)");
+    assert_execute!("(cdr '(1 2 3))", "(2 3)");
+    assert_execute!("(cdr '(1))", "()");
+    assert_execute!("(cdr '((1) (2 3)))", "((2 3))");
+    assert_execute_fail!("(cdr '())", "RuntimeError: Can't run cdr on an empty list");
+}
+
+#[test]
+fn test_append() {
+    assert_execute!("(append '(1) '(2))", "(1 2)");
+    assert_execute!("(append '(1) '())", "(1)");
+    assert_execute!("(append '() '(2))", "(2)");
+    assert_execute!("(append '() '())", "()");
+    assert_execute!("(append '(1) '((2)))", "(1 (2))");
 }
 
 #[test]
