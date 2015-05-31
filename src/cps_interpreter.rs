@@ -171,6 +171,7 @@ enum SpecialForm {
 enum Trampoline {
     Bounce(Value, Rc<RefCell<Environment>>, Continuation),
     QuasiBounce(Value, Rc<RefCell<Environment>>, Continuation),
+    Run(Value, Continuation),
     Land(Value),
 }
 
@@ -333,7 +334,7 @@ impl Continuation {
                 if !rest.is_empty() {
                     evaluate_expressions(rest, env, k)
                 } else {
-                    k.run(val)
+                    Ok(Trampoline::Run(val, *k))
                 }
             },
             Continuation::BeginFunc(rest, env, k) => {
@@ -360,7 +361,7 @@ impl Continuation {
                                         let f = Function::Scheme(arg_names, body, env.clone());
 
                                         try!(env.borrow_mut().define(name, Value::Procedure(f)));
-                                        k.run(null!())
+                                        Ok(Trampoline::Run(null!(), *k))
                                     },
                                     _ => runtime_error!("Bad argument to define: {:?}", car)
                                 }
@@ -376,7 +377,7 @@ impl Continuation {
                                 let arg_names = try!(arg_defns.into_iter().map(|v| v.as_symbol()).collect());
 
                                 let f = Function::Scheme(arg_names, body, env);
-                                k.run(Value::Procedure(f))
+                                Ok(Trampoline::Run(Value::Procedure(f), *k))
                             },
                             SpecialForm::Let => {
                                 let (arg_defns_raw, body) = shift_or_error!(rest, "Must provide at least two arguments to let");
@@ -398,7 +399,7 @@ impl Continuation {
                             },
                             SpecialForm::Quote => {
                                 let expr = try!(rest.unpack1());
-                                k.run(expr)
+                                Ok(Trampoline::Run(expr, *k))
                             },
                             SpecialForm::Quasiquote => {
                                 let expr = try!(rest.unpack1());
@@ -406,10 +407,10 @@ impl Continuation {
                                     Value::List(list) => {
                                         match list.shift() {
                                             Some((car, cdr)) => Ok(Trampoline::QuasiBounce(car, env.clone(), Continuation::ContinueQuasiquoting(cdr, List::Null, env, k))),
-                                            None => k.run(null!())
+                                            None => Ok(Trampoline::Run(null!(), *k))
                                         }
                                     },
-                                    _ => k.run(expr)
+                                    _ => Ok(Trampoline::Run(expr, *k))
                                 }
                             },
                             SpecialForm::Eval => {
@@ -429,13 +430,13 @@ impl Continuation {
                             SpecialForm::And => {
                                 match rest.shift() {
                                     Some((car, cdr)) => Ok(Trampoline::Bounce(car, env.clone(), Continuation::EvaluateAnd(cdr, env, k))),
-                                    None => k.run(Value::Boolean(true))
+                                    None => Ok(Trampoline::Run(Value::Boolean(true), *k))
                                 }
                             },
                             SpecialForm::Or => {
                                 match rest.shift() {
                                     Some((car, cdr)) => Ok(Trampoline::Bounce(car, env.clone(), Continuation::EvaluateOr(cdr, env, k))),
-                                    None => k.run(Value::Boolean(false))
+                                    None => Ok(Trampoline::Run(Value::Boolean(false), *k))
                                 }
                             },
                             SpecialForm::CallCC => {
@@ -454,7 +455,7 @@ impl Continuation {
 
                                 let m = Value::Macro(arg_names, Box::new(body));
                                 try!(env.borrow_mut().define(name, m));
-                                k.run(null!())
+                                Ok(Trampoline::Run(null!(), *k))
                             },
                         }
                     },
@@ -499,11 +500,11 @@ impl Continuation {
             },
             Continuation::EvaluateDefine(name, env, k) => {
                 try!(env.borrow_mut().define(name, val));
-                k.run(null!())
+                Ok(Trampoline::Run(null!(), *k))
             },
             Continuation::EvaluateSet(name, env, k) => {
                 try!(env.borrow_mut().set(name, val));
-                k.run(null!())
+                Ok(Trampoline::Run(null!(), *k))
             },
             Continuation::EvaluateLet(name, rest, body, env, k) => {
                 // Define variable in let scope
@@ -524,7 +525,7 @@ impl Continuation {
                 let acc2 = acc.unshift(val);
                 match rest.shift() {
                     Some((car, cdr)) => Ok(Trampoline::QuasiBounce(car, env.clone(), Continuation::ContinueQuasiquoting(cdr, acc2, env, k))),
-                    None => k.run(acc2.reverse().to_value())
+                    None => Ok(Trampoline::Run(acc2.reverse().to_value(), *k))
                 }
             },
             Continuation::ExecuteEval(env, k) => {
@@ -538,11 +539,11 @@ impl Continuation {
             },
             Continuation::EvaluateAnd(rest, env, k) => {
                 match val {
-                    Value::Boolean(false) => k.run(Value::Boolean(false)),
+                    Value::Boolean(false) => Ok(Trampoline::Run(Value::Boolean(false), *k)),
                     _ => {
                         match rest.shift() {
                             Some((car, cdr)) => Ok(Trampoline::Bounce(car, env.clone(), Continuation::EvaluateAnd(cdr, env, k))),
-                            None => k.run(val)
+                            None => Ok(Trampoline::Run(val, *k))
                         }
                     }
                 }
@@ -552,10 +553,10 @@ impl Continuation {
                     Value::Boolean(false) => {
                         match rest.shift() {
                             Some((car, cdr)) => Ok(Trampoline::Bounce(car, env.clone(), Continuation::EvaluateOr(cdr, env, k))),
-                            None => k.run(Value::Boolean(false))
+                            None => Ok(Trampoline::Run(Value::Boolean(false), *k))
                         }
                     },
-                    _ => k.run(val)
+                    _ => Ok(Trampoline::Run(val, *k))
                 }
             },
             Continuation::ExecuteCallCC(k) => {
@@ -587,12 +588,12 @@ fn apply(val: Value, args: List, k: Box<Continuation>) -> Result<Trampoline, Run
                 },
                 Function::Native(g) => {
                     let res = try!(primitive(g, args));
-                    k.run(res)
+                    Ok(Trampoline::Run(res, *k))
                 },
             }
         },
         Value::Continuation(k_prime) => {
-            k_prime.run(args.to_value())
+            Ok(Trampoline::Run(args.to_value(), *k_prime))
         },
         _ => {
             runtime_error!("Don't know how to apply: {:?}", val)
@@ -692,6 +693,11 @@ fn process(exprs: List, env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeE
                     },
                     _ => try!(k.run(a))
                 }
+            },
+
+            // Run doesn't evaluate the value, it just runs k with it. It's similar to running inline, but bounces to avoid growing the stack.
+            Trampoline::Run(a, k) => {
+                b = try!(k.run(a))
             },
 
             // Land just returns the value. It should only ever be created at the very beginning of process, and will be the last Trampoline value called.

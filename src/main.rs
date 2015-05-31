@@ -348,3 +348,9 @@ fn test_multiline() {
 fn test_comment() {
     assert_execute!("(define x 3)\n(define y 4)\n;(set! y 5)\n(+ x y); (+ x y)", "7");
 }
+
+#[test]
+fn test_tail_call_optimization() {
+    let src = "(define (f i) (if (= i 1000) '() (f (+ i 1)))) (f 1)";
+    assert_eq!(interpreter::new("cps").execute(src).unwrap(), "()");
+}
