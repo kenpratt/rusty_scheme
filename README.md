@@ -7,7 +7,7 @@ It supports a small number of standard library functions, as well as:
 
 * Function and variable definition
 * Quote, Quasiquote/unquote
-* Apply & eval
+* Apply & Eval
 * Macros (not hygenic yet)
 * Let expressions
 * Tail-call optimization
@@ -17,10 +17,10 @@ It supports a small number of standard library functions, as well as:
 
 There are two versions of the interpreter:
 
-* A straight-forward AST-walking interpreter, whicth uses the Rust stack and heap, and uses vectors to represent Scheme lists.
+* A straight-forward AST-walking interpreter, which uses the Rust stack and heap, and uses vectors to represent Scheme lists.
 * A [continuation-passing style](http://en.wikipedia.org/wiki/Continuation-passing_style) interpreter, which supports tail-call optimization and continuations, uses the Rust stack and heap, and uses a linked list to represent Scheme lists.
 
-In the future, I may develop an interpreter that manages its own stack and/or heap, and possible a bytecode VM version as well for comparison.
+In the future, I may develop an interpreter that manages its own stack and/or heap, and possibly a bytecode VM & compiler as well for comparison.
 
 Requirements
 ------------
@@ -32,19 +32,27 @@ Usage
 
 Download and install Rust 0.12.0 from http://www.rust-lang.org/install.html.
 
-Build and start REPL:
+To start a REPL using the default CPS interpreter:
 
     cargo run
 
-Build & execute a Scheme file:
+To execute a Scheme file using the default CPS interpreter:
 
     cargo run myprogram.scm
 
-Build & run unit tests:
+To start a REPL using the AST-walking interpreter:
+
+    cargo run -- -t ast_walk
+
+To execute a Scheme file using the AST-walking interpreter:
+
+    cargo run -- -t ast_walk myprogram.scm
+
+To run the test suite:
 
     cargo test
 
-Watch for changes and auto-rebuild (on OS X):
+To watch for changes and auto-rebuild (on OS X):
 
     gem install kicker -s http://gemcutter.org
     ./watch
