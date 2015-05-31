@@ -75,8 +75,56 @@ fn test_basic_identities() {
 }
 
 #[test]
-fn test_simple_function() {
+fn test_addition() {
     assert_execute!("(+ 2 3)", "5");
+    assert_execute!("(+ 2 -3)", "-1");
+    assert_execute!("(+ 2 3 4 5)", "14");
+}
+
+#[test]
+fn test_subtraction() {
+    assert_execute!("(- 3 2)", "1");
+    assert_execute!("(- 2 -3)", "5");
+}
+
+#[test]
+fn test_multiplication() {
+    assert_execute!("(* 2 3)", "6");
+    assert_execute!("(* 2 -3)", "-6");
+    assert_execute!("(* 2 3 4 5)", "120");
+}
+
+#[test]
+fn test_division() {
+    assert_execute!("(/ 4 2)", "2");
+    assert_execute!("(/ 4 3)", "1");
+    assert_execute!("(/ 4 -2)", "-2");
+}
+
+#[test]
+fn test_lessthan() {
+    assert_execute!("(< 1 2)", "#t");
+    assert_execute!("(< 2 2)", "#f");
+    assert_execute!("(< 3 2)", "#f");
+    assert_execute!("(< -1 2)", "#t");
+    assert_execute!("(< 2 -1)", "#f");
+}
+
+#[test]
+fn test_greaterthan() {
+    assert_execute!("(> 3 2)", "#t");
+    assert_execute!("(> 2 2)", "#f");
+    assert_execute!("(> 1 2)", "#f");
+    assert_execute!("(> 2 -1)", "#t");
+    assert_execute!("(> -1 2)", "#f");
+}
+
+#[test]
+fn test_equal() {
+    assert_execute!("(= 2 2)", "#t");
+    assert_execute!("(= 1 2)", "#f");
+    assert_execute!("(= -1 -1)", "#t");
+    assert_execute!("(= -1 2)", "#f");
 }
 
 #[test]

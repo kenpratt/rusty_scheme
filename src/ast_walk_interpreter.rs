@@ -148,6 +148,11 @@ impl Environment {
             ("if", Function::Native(native_if)),
             ("+", Function::Native(native_plus)),
             ("-", Function::Native(native_minus)),
+            ("*", Function::Native(native_multiply)),
+            ("/", Function::Native(native_divide)),
+            ("<", Function::Native(native_lessthan)),
+            (">", Function::Native(native_greaterthan)),
+            ("=", Function::Native(native_equal)),
             ("and", Function::Native(native_and)),
             ("or", Function::Native(native_or)),
             ("null?", Function::Native(native_null)),
@@ -530,6 +535,89 @@ fn native_minus(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, 
         _ => runtime_error!("Unexpected value during -: {:?}", args)
     };
     Ok(Value::Integer(result))
+}
+
+fn native_multiply(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() < 2 {
+        runtime_error!("Must supply at least two arguments to *: {:?}", args);
+    }
+    let mut product = 1;
+    for n in args.iter() {
+        let v = try!(evaluate_value(n, env.clone()));
+        match v {
+            Value::Integer(x) => product *= x,
+            _ => runtime_error!("Unexpected value during *: {:?}", n)
+        };
+    };
+    Ok(Value::Integer(product))
+}
+
+fn native_divide(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        runtime_error!("Must supply exactly two arguments to /: {:?}", args);
+    }
+    let l = try!(evaluate_value(&args[0], env.clone()));
+    let r = try!(evaluate_value(&args[1], env.clone()));
+    let mut result = match l {
+        Value::Integer(x) => x,
+        _ => runtime_error!("Unexpected value during /: {:?}", args)
+    };
+    result /= match r {
+        Value::Integer(x) => x,
+        _ => runtime_error!("Unexpected value during /: {:?}", args)
+    };
+    Ok(Value::Integer(result))
+}
+
+fn native_lessthan(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        runtime_error!("Must supply exactly two arguments to <: {:?}", args);
+    }
+    let l_raw = try!(evaluate_value(&args[0], env.clone()));
+    let r_raw = try!(evaluate_value(&args[1], env.clone()));
+    let l = match l_raw {
+        Value::Integer(x) => x,
+        _ => runtime_error!("Unexpected value during <: {:?}", args)
+    };
+    let r = match r_raw {
+        Value::Integer(x) => x,
+        _ => runtime_error!("Unexpected value during <: {:?}", args)
+    };
+    Ok(Value::Boolean(l < r))
+}
+
+fn native_greaterthan(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        runtime_error!("Must supply exactly two arguments to >: {:?}", args);
+    }
+    let l_raw = try!(evaluate_value(&args[0], env.clone()));
+    let r_raw = try!(evaluate_value(&args[1], env.clone()));
+    let l = match l_raw {
+        Value::Integer(x) => x,
+        _ => runtime_error!("Unexpected value during >: {:?}", args)
+    };
+    let r = match r_raw {
+        Value::Integer(x) => x,
+        _ => runtime_error!("Unexpected value during >: {:?}", args)
+    };
+    Ok(Value::Boolean(l > r))
+}
+
+fn native_equal(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        runtime_error!("Must supply exactly two arguments to =: {:?}", args);
+    }
+    let l_raw = try!(evaluate_value(&args[0], env.clone()));
+    let r_raw = try!(evaluate_value(&args[1], env.clone()));
+    let l = match l_raw {
+        Value::Integer(x) => x,
+        _ => runtime_error!("Unexpected value during =: {:?}", args)
+    };
+    let r = match r_raw {
+        Value::Integer(x) => x,
+        _ => runtime_error!("Unexpected value during =: {:?}", args)
+    };
+    Ok(Value::Boolean(l == r))
 }
 
 fn native_and(args: &[Value], env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeError> {

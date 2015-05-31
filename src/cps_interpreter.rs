@@ -722,7 +722,11 @@ impl Environment {
         let mut env = Environment { parent: None, values: HashMap::new() };
         try!(env.define("+".to_string(), Value::Procedure(Function::Native("+"))));
         try!(env.define("-".to_string(), Value::Procedure(Function::Native("-"))));
+        try!(env.define("*".to_string(), Value::Procedure(Function::Native("*"))));
+        try!(env.define("/".to_string(), Value::Procedure(Function::Native("/"))));
+        try!(env.define("<".to_string(), Value::Procedure(Function::Native("<"))));
         try!(env.define(">".to_string(), Value::Procedure(Function::Native(">"))));
+        try!(env.define("=".to_string(), Value::Procedure(Function::Native("="))));
         try!(env.define("null?".to_string(), Value::Procedure(Function::Native("null?"))));
         try!(env.define("list".to_string(), Value::Procedure(Function::Native("list"))));
         try!(env.define("car".to_string(), Value::Procedure(Function::Native("car"))));
@@ -808,12 +812,40 @@ fn primitive(f: &'static str, args: List) -> Result<Value, RuntimeError> {
             let (l, r) = try!(args.unpack2());
             Ok(Value::Integer(try!(l.as_integer()) - try!(r.as_integer())))
         },
+        "*" => {
+            let product = try!(args.into_iter().fold(Ok(1), |s, a| match s {
+                Ok(z) => Ok(z * try!(a.as_integer())),
+                _ => s
+            }));
+            Ok(Value::Integer(product))
+        },
+        "/" => {
+            if args.len() != 2 {
+                runtime_error!("Must supply exactly two arguments to /: {:?}", args);
+            }
+            let (l, r) = try!(args.unpack2());
+            Ok(Value::Integer(try!(l.as_integer()) / try!(r.as_integer())))
+        },
+        "<" => {
+            if args.len() != 2 {
+                runtime_error!("Must supply exactly two arguments to <: {:?}", args);
+            }
+            let (l, r) = try!(args.unpack2());
+            Ok(Value::Boolean(try!(l.as_integer()) < try!(r.as_integer())))
+        },
         ">" => {
             if args.len() != 2 {
                 runtime_error!("Must supply exactly two arguments to >: {:?}", args);
             }
             let (l, r) = try!(args.unpack2());
             Ok(Value::Boolean(try!(l.as_integer()) > try!(r.as_integer())))
+        },
+        "=" => {
+            if args.len() != 2 {
+                runtime_error!("Must supply exactly two arguments to =: {:?}", args);
+            }
+            let (l, r) = try!(args.unpack2());
+            Ok(Value::Boolean(try!(l.as_integer()) == try!(r.as_integer())))
         },
         "null?" => {
             if args.len() != 1 {
