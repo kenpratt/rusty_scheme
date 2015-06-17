@@ -30,7 +30,7 @@ Requirements
 Usage
 -----
 
-Download and install Rust 0.12.0 from http://www.rust-lang.org/install.html.
+Download and install Rust 1.0 from http://www.rust-lang.org/install.html.
 
 To start a REPL using the default CPS interpreter:
 
@@ -38,7 +38,7 @@ To start a REPL using the default CPS interpreter:
 
 To execute a Scheme file using the default CPS interpreter:
 
-    cargo run myprogram.scm
+    cargo run examples/printing.scm
 
 To start a REPL using the AST-walking interpreter:
 
@@ -46,7 +46,7 @@ To start a REPL using the AST-walking interpreter:
 
 To execute a Scheme file using the AST-walking interpreter:
 
-    cargo run -- -t ast_walk myprogram.scm
+    cargo run -- -t ast_walk examples/printing.scm
 
 To run the test suite:
 
