@@ -11,6 +11,9 @@ mod parser;
 mod interpreter;
 mod ast_walk_interpreter;
 mod cps_interpreter;
+mod jvm_compiler;
+mod classfile;
+mod classfile_builder;
 
 #[cfg(not(test))]
 mod repl;
@@ -53,26 +56,28 @@ fn print_usage(program: &str, opts: Options) {
 }
 
 macro_rules! test {
-    ($name:ident, $src:expr, $res:expr) => (#[test] fn $name() { assert_execute_all!($src, $res); });
+    ($name:ident, $src:expr, $res:expr) => (#[test] fn $name() { assert_execute_all!($name, $src, $res); });
     ($name:ident, $src:expr, $res:expr, cps) => (#[test] fn $name() { assert_execute_cps!($src, $res); });
 }
 
 macro_rules! test_fail {
-    ($name:ident, $src:expr, $res:expr) => (#[test] fn $name() { assert_execute_fail_all!($src, $res); });
+    ($name:ident, $src:expr, $res:expr) => (#[test] fn $name() { assert_execute_fail_all!($name, $src, $res); });
     ($name:ident, $src:expr, $res:expr, cps) => (#[test] fn $name() { assert_execute_fail_cps!($src, $res); });
 }
 
 macro_rules! assert_execute_all {
-    ($src:expr, $res:expr) => (
+    ($name:ident, $src:expr, $res:expr) => (
         assert_execute_ast_walk!($src, $res);
         assert_execute_cps!($src, $res);
+        assert_execute_jvm!($name, $src, $res);
     )
 }
 
 macro_rules! assert_execute_fail_all {
-    ($src:expr, $res:expr) => (
+    ($name:ident, $src:expr, $res:expr) => (
         assert_execute_fail_ast_walk!($src, $res);
         assert_execute_fail_cps!($src, $res);
+        assert_execute_fail_jvm!($name, $src, $res);
     )
 }
 
@@ -81,7 +86,7 @@ macro_rules! assert_execute_ast_walk {
 }
 
 macro_rules! assert_execute_fail_ast_walk {
-    ($src:expr, $res:expr) => (assert_eq!(interpreter::new("ast_walk").execute($src).err().unwrap(), $res));
+    ($src:expr, $res:expr) => (assert_eq!(interpreter::new("ast_walk").execute($src).unwrap_err(), $res));
 }
 
 macro_rules! assert_execute_cps {
@@ -89,7 +94,15 @@ macro_rules! assert_execute_cps {
 }
 
 macro_rules! assert_execute_fail_cps {
-    ($src:expr, $res:expr) => (assert_eq!(interpreter::new("cps").execute($src).err().unwrap(), $res));
+    ($src:expr, $res:expr) => (assert_eq!(interpreter::new("cps").execute($src).unwrap_err(), $res));
+}
+
+macro_rules! assert_execute_jvm {
+    ($name:ident, $src:expr, $res:expr) => (assert_eq!(jvm_compiler::execute(stringify!(concat_idents!(test_, $name)), $src).unwrap(), $res));
+}
+
+macro_rules! assert_execute_fail_jvm {
+    ($name:ident, $src:expr, $res:expr) => (assert_eq!(format!("{:?}", jvm_compiler::execute(stringify!(concat_idents!(test_, $name)), $src).unwrap_err()), $res));
 }
 
 test!(identity1, "1", "1");
