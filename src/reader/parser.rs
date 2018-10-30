@@ -1,4 +1,4 @@
-use lexer::*;
+use crate::reader::lexer::*;
 
 use std::fmt;
 use std::slice;

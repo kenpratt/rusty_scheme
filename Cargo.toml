@@ -3,5 +3,5 @@ name = "rusty_scheme"
 version = "0.0.2"
 
 [dependencies]
-getopts = "0.2"
-libc = "0.1"
+getopts = "^0.2"
+libc = "^0.2"
