@@ -59,7 +59,7 @@ impl Interpreter {
     #[cfg(not(test))]
     pub fn start_repl(&self) {
         println!("\nWelcome to the RustyScheme REPL!");
-        repl::start("> ", (|s| self.execute(&s)))
+        repl::start("> ", |s| self.execute(&s))
     }
 
     #[cfg(not(test))]

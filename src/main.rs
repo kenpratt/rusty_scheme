@@ -46,6 +46,8 @@ fn main() {
     }
 }
 
+//TODO: Refactor all this to use current testing stuff
+
 #[cfg(not(test))]
 fn print_usage(program: &str, opts: Options) {
     let brief = format!("Usage: {} [options]", program);
