@@ -1,20 +1,10 @@
 extern crate getopts;
-
+extern crate rusty_scheme;
 #[cfg(not(test))]
 use getopts::Options;
-
+use rusty_scheme::interpreter::interpreter;
 #[cfg(not(test))]
 use std::env;
-
-mod lexer;
-mod parser;
-mod interpreter;
-mod ast_walk_interpreter;
-mod cps_interpreter;
-
-#[cfg(not(test))]
-mod repl;
-
 #[cfg(not(test))]
 fn main() {
     // parse command-line arguments & options
