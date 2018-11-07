@@ -1,10 +1,10 @@
-use lexer;
-use parser;
-use ast_walk_interpreter;
-use cps_interpreter;
+use crate::reader::lexer;
+use crate::reader::parser;
+use crate::interpreter::ast_walk_interpreter;
+use crate::interpreter::cps_interpreter;
 
 #[cfg(not(test))]
-use repl;
+use crate::core::repl;
 
 #[cfg(not(test))]
 use std::fs::File;
@@ -59,7 +59,7 @@ impl Interpreter {
     #[cfg(not(test))]
     pub fn start_repl(&self) {
         println!("\nWelcome to the RustyScheme REPL!");
-        repl::start("> ", (|s| self.execute(&s)))
+        repl::start("> ", |s| self.execute(&s))
     }
 
     #[cfg(not(test))]

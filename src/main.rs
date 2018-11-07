@@ -1,20 +1,10 @@
 extern crate getopts;
-
+extern crate rusty_scheme;
 #[cfg(not(test))]
 use getopts::Options;
-
+use rusty_scheme::interpreter::interpreter;
 #[cfg(not(test))]
 use std::env;
-
-mod lexer;
-mod parser;
-mod interpreter;
-mod ast_walk_interpreter;
-mod cps_interpreter;
-
-#[cfg(not(test))]
-mod repl;
-
 #[cfg(not(test))]
 fn main() {
     // parse command-line arguments & options
@@ -45,6 +35,8 @@ fn main() {
         _ => panic!("You must provide 0 or 1 arguments to RustyScheme: {:?}", rest)
     }
 }
+
+//TODO: Refactor all this to use current testing stuff
 
 #[cfg(not(test))]
 fn print_usage(program: &str, opts: Options) {

@@ -1,4 +1,4 @@
-use parser::*;
+use crate::reader::parser::*;
 
 use std::fmt;
 use std::collections::HashMap;
@@ -46,7 +46,7 @@ macro_rules! shift_or_error {
 }
 
 #[derive(PartialEq, Clone)]
-enum Value {
+pub enum Value {
     Symbol(String),
     Integer(i64),
     Boolean(bool),
@@ -136,7 +136,7 @@ impl fmt::Debug for Value {
 }
 
 #[derive(Clone, PartialEq)]
-enum Function {
+pub enum Function {
     Scheme(Vec<String>, List, Rc<RefCell<Environment>>),
     Native(&'static str),
 }
@@ -151,7 +151,7 @@ impl fmt::Debug for Function {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-enum SpecialForm {
+pub enum SpecialForm {
     If,
     Define,
     Set,
@@ -168,7 +168,7 @@ enum SpecialForm {
     DefineSyntaxRule,
 }
 
-enum Trampoline {
+pub enum Trampoline {
     Bounce(Value, Rc<RefCell<Environment>>, Continuation),
     QuasiBounce(Value, Rc<RefCell<Environment>>, Continuation),
     Run(Value, Continuation),
@@ -176,7 +176,7 @@ enum Trampoline {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-enum Continuation {
+pub enum Continuation {
     EvaluateExpressions(List, Rc<RefCell<Environment>>, Box<Continuation>),
     BeginFunc(List, Rc<RefCell<Environment>>, Box<Continuation>),
     EvaluateIf(Value, Value, Rc<RefCell<Environment>>, Box<Continuation>),
@@ -206,7 +206,7 @@ impl fmt::Display for RuntimeError {
 }
 
 #[derive(PartialEq, Clone)]
-enum List {
+pub enum List {
     Cell(Box<Value>, Box<List>),
     Null
 }
@@ -316,14 +316,14 @@ impl iter::IntoIterator for List {
 impl fmt::Display for List {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let strs: Vec<String> = self.clone().into_iter().map(|v| format!("{}", v)).collect();
-        write!(f, "({})", &strs.connect(" "))
+        write!(f, "({})", &strs.join(" "))
     }
 }
 
 impl fmt::Debug for List {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let strs: Vec<String> = self.clone().into_iter().map(|v| format!("{:?}", v)).collect();
-        write!(f, "({})", &strs.connect(" "))
+        write!(f, "({})", &strs.join(" "))
     }
 }
 
@@ -709,7 +709,7 @@ fn process(exprs: List, env: Rc<RefCell<Environment>>) -> Result<Value, RuntimeE
 }
 
 #[derive(PartialEq)]
-struct Environment {
+pub struct Environment {
     parent: Option<Rc<RefCell<Environment>>>,
     values: HashMap<String, Value>,
 }

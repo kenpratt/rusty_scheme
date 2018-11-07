@@ -1,4 +1,4 @@
-use parser::*;
+use crate::reader::parser::*;
 
 use std::fmt;
 use std::collections::HashMap;
@@ -45,7 +45,7 @@ pub enum Function {
 }
 
 // type signature for all native functions
-type ValueOperation = fn(&[Value], Rc<RefCell<Environment>>) -> Result<Value, RuntimeError>;
+pub type ValueOperation = fn(&[Value], Rc<RefCell<Environment>>) -> Result<Value, RuntimeError>;
 
 impl Value {
     fn from_nodes(nodes: &[Node]) -> Vec<Value> {
@@ -72,7 +72,7 @@ impl fmt::Display for Value {
             Value::String(ref val) => write!(f, "{}", val),
             Value::List(ref list)  => {
                 let strs: Vec<String> = list.iter().map(|v| format!("{}", v)).collect();
-                write!(f, "({})", &strs.connect(" "))
+                write!(f, "({})", &strs.join(" "))
             },
             Value::Procedure(_)   => write!(f, "#<procedure>"),
             Value::Macro(_,_)     => write!(f, "#<macro>"),
@@ -86,7 +86,7 @@ impl fmt::Debug for Value {
             Value::String(ref val) => write!(f, "\"{}\"", val),
             Value::List(ref list)  => {
                 let strs: Vec<String> = list.iter().map(|v| format!("{:?}", v)).collect();
-                write!(f, "({})", &strs.connect(" "))
+                write!(f, "({})", &strs.join(" "))
             },
             _                      => write!(f, "{}", self)
         }
@@ -129,11 +129,14 @@ macro_rules! runtime_error {
     )
 }
 
-struct Environment {
+pub struct Environment {
     parent: Option<Rc<RefCell<Environment>>>,
     values: HashMap<String, Value>,
 }
 
+/**
+ * 
+ */
 impl Environment {
     fn new_root() -> Rc<RefCell<Environment>> {
         let mut env = Environment { parent: None, values: HashMap::new() };
